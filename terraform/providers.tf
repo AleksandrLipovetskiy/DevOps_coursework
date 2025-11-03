@@ -8,8 +8,7 @@ terraform {
 }
 
 provider "yandex" {
-  access_key = var.backend_access_key
-  secret_key = var.backend_secret_key
+  service_account_key_file = var.service_account_key_file
   cloud_id  = var.cloud_id
   folder_id = var.folder_id
   zone      = var.default_zone
