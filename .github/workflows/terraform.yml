@@ -31,25 +31,6 @@ jobs:
         with:
           terraform_version:
 
-      - name: Create key.json for Yandex Cloud provider
-        run: |
-          printf '%s' '${{ secrets.YC_SERVICE_ACCOUNT_KEY }}' > ./terraform/key.json
-
-      - name: Clean key.json  
-        run: |
-          sed -i 's/^[^[{]*//' ./terraform/key.json
-
-      - name: Validate key.json
-        run: |
-          if ! jq . ./terraform/key.json >/dev/null 2>&1; then
-            echo "Error: key.json is not valid JSON"
-            exit 1
-          fi
-
-      - name: Debug key.json content
-        run: |
-          head -c 25 ./terraform/key.json
-
       - name: Terraform Init
         env:
           YC_ACCESS_KEY: ${{ secrets.YC_ACCESS_KEY }}
@@ -76,6 +57,34 @@ jobs:
           name: terraform-plan
           path: ./terraform/tfplan
 
+      - name: Create key.json for Yandex Cloud provider
+        run: |
+          printf '%s' '${{ secrets.YC_SERVICE_ACCOUNT_KEY }}' > ./terraform/key.json
+
+      - name: Debug key.json content before cleaning
+        run: |
+          head -c 20 ./terraform/key.json
+
+      - name: Clean key.json
+        run: |
+          sed -i 's/^[^[{]*//' ./terraform/key.json
+
+      - name: Debug key.json content after cleaning
+        run: |
+          head -c 20 ./terraform/key.json
+
+      - name: Extract JSON from key.json
+        run: |
+          grep -o '{.*}' ./terraform/key.json > ./terraform/key_cleaned.json
+          mv ./terraform/key_cleaned.json ./terraform/key.json
+
+      - name: Validate key.json
+        run: |
+          if ! jq . ./terraform/key.json >/dev/null 2>&1; then
+            echo "Error: key.json is not valid JSON"
+            exit 1
+          fi
+
       - name: Terraform Apply
         if: |
           github.event_name == 'push' &&
@@ -86,5 +95,6 @@ jobs:
           TF_VAR_backend_secret_key: ${{ secrets.YC_SECRET_KEY }}
           TF_VAR_cloud_id: ${{ secrets.YC_CLOUD_ID }}
           TF_VAR_folder_id: ${{ secrets.YC_FOLDER_ID }}
+        timeout-minutes: 10
         run: terraform apply -auto-approve
         working-directory: ./terraform
