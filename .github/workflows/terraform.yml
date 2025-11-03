@@ -21,6 +21,10 @@ jobs:
     env:
       TF_VAR_service_account_key_file: ./terraform/key.json
       TF_VAR_ssh_public_key: ${{ secrets.SSH_PUBLIC_KEY }}
+      TF_VAR_backend_access_key: ${{ secrets.YC_ACCESS_KEY }}
+      TF_VAR_backend_secret_key: ${{ secrets.YC_SECRET_KEY }}
+      TF_VAR_cloud_id: ${{ secrets.YC_CLOUD_ID }}
+      TF_VAR_folder_id: ${{ secrets.YC_FOLDER_ID }}
 
     steps:
       - name: Checkout code
@@ -29,7 +33,7 @@ jobs:
       - name: Setup Terraform
         uses: hashicorp/setup-terraform@v2
         with:
-          terraform_version:
+          terraform_version: latest
 
       - name: Terraform Init
         env:
@@ -52,38 +56,10 @@ jobs:
  
       - name: Upload Terraform Plan
         if: github.event_name == 'pull_request'
-        uses: actions/upload-artifact@v4       
+        uses: actions/upload-artifact@v4
         with:
           name: terraform-plan
           path: ./terraform/tfplan
-
-      - name: Create key.json for Yandex Cloud provider
-        run: |
-          printf '%s' '${{ secrets.YC_SERVICE_ACCOUNT_KEY }}' > ./terraform/key.json
-
-      - name: Debug key.json content before cleaning
-        run: |
-          head -c 20 ./terraform/key.json
-
-      - name: Clean key.json
-        run: |
-          sed -i 's/^[^[{]*//' ./terraform/key.json
-
-      - name: Debug key.json content after cleaning
-        run: |
-          head -c 20 ./terraform/key.json
-
-      - name: Extract JSON from key.json
-        run: |
-          grep -o '{.*}' ./terraform/key.json > ./terraform/key_cleaned.json
-          mv ./terraform/key_cleaned.json ./terraform/key.json
-
-      - name: Validate key.json
-        run: |
-          if ! jq . ./terraform/key.json >/dev/null 2>&1; then
-            echo "Error: key.json is not valid JSON"
-            exit 1
-          fi
 
       - name: Terraform Apply
         if: |
@@ -91,10 +67,5 @@ jobs:
           github.ref == 'refs/heads/main'
         env:
           TF_LOG: DEBUG
-          TF_VAR_backend_access_key: ${{ secrets.YC_ACCESS_KEY }}
-          TF_VAR_backend_secret_key: ${{ secrets.YC_SECRET_KEY }}
-          TF_VAR_cloud_id: ${{ secrets.YC_CLOUD_ID }}
-          TF_VAR_folder_id: ${{ secrets.YC_FOLDER_ID }}
-        timeout-minutes: 10
         run: terraform apply -auto-approve
         working-directory: ./terraform
