@@ -35,9 +35,20 @@ jobs:
         run: |
           printf '%s' '${{ secrets.YC_SERVICE_ACCOUNT_KEY }}' > ./terraform/key.json
 
+      - name: Clean key.json  
+        run: |
+          sed -i 's/^[^[{]*//' ./terraform/key.json
+
+      - name: Validate key.json
+        run: |
+          if ! jq . ./terraform/key.json >/dev/null 2>&1; then
+            echo "Error: key.json is not valid JSON"
+            exit 1
+          fi
+
       - name: Debug key.json content
         run: |
-          head -c 12 ./terraform/key.json
+          head -c 25 ./terraform/key.json
 
       - name: Terraform Init
         env:
