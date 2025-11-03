@@ -1,6 +1,17 @@
 name: Terraform Pipeline
 
 on:
+  workflow_dispatch:    # Позволяет запускать вручную из веб-интерфейса
+  push:
+    branches: [main]
+    paths:
+      - 'terraform/**'
+  pull_request:
+    branches: [main]
+    paths:
+      - 'terraform/**'
+
+on:
   push:
     branches: [main]
     paths:
