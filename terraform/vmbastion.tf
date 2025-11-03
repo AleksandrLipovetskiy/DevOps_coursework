@@ -1,5 +1,5 @@
 resource "yandex_compute_instance" "bastion" {
-  count = 2
+  count = 1
 
   name        = "bastion"
   platform_id = var.instance_settings.platform_id

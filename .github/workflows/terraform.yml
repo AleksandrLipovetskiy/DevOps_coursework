@@ -37,7 +37,7 @@ jobs:
 
       - name: Debug key.json content
         run: |
-          head -c 10 ./terraform/key.json
+          head -c 12 ./terraform/key.json
 
       - name: Terraform Init
         env:
