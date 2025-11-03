@@ -58,12 +58,10 @@ jobs:
           path: ./terraform/tfplan
 
       - name: Create key.json for Yandex Cloud provider
-        run: |
-          printf '%s' '${{ secrets.YC_SERVICE_ACCOUNT_KEY }}' > ./terraform/key.json
+        run: echo "${{ secrets.YC_SERVICE_ACCOUNT_KEY }}" > ./terraform/key.json
 
       - name: Debug key.json content before cleaning
-        run: |
-          head -c 20 ./terraform/key.json
+        run: head -c 25 ./terraform/key.json
 
       - name: Terraform Apply
         if: |
