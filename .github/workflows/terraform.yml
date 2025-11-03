@@ -31,6 +31,10 @@ jobs:
         with:
           terraform_version:
 
+      - name: Debug key.json content
+        run: |
+          head -c 10 ./terraform/key.json
+
       - name: Create key.json for Yandex Cloud provider
         run: |
           printf '%s' '${{ secrets.YC_SERVICE_ACCOUNT_KEY }}' > ./terraform/key.json
