@@ -68,5 +68,8 @@ jobs:
         env:
           TF_LOG: DEBUG
           TF_VAR_backend_access_key: ${{ secrets.YC_ACCESS_KEY }}
+          TF_VAR_backend_secret_key: ${{ secrets.YC_SECRET_KEY }}
+          TF_VAR_cloud_id: ${{ secrets.YC_CLOUD_ID }}
+          TF_VAR_folder_id: ${{ secrets.YC_FOLDER_ID }}
         run: terraform apply -auto-approve
         working-directory: ./terraform
