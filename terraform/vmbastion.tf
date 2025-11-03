@@ -1,7 +1,7 @@
 resource "yandex_compute_instance" "bastion" {
   count = 2
 
-  name        = "bastion"
+  name        = "bastion-${count.index + 1}"
   platform_id = var.instance_settings.platform_id
   zone        = var.default_zone
 
