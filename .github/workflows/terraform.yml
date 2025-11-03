@@ -65,5 +65,8 @@ jobs:
         if: |
           github.event_name == 'push' &&
           github.ref == 'refs/heads/main'
+        env:
+          TF_LOG: DEBUG
+          TF_VAR_backend_access_key: ${{ secrets.YC_ACCESS_KEY }}
         run: terraform apply -auto-approve
         working-directory: ./terraform
