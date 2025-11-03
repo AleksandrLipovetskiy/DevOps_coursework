@@ -1,7 +1,22 @@
 ###cloud vars
-variable "token" {
+variable "ssh_public_key" {
   type        = string
-  sensitive   = true
+  description = "Публичный SSH‑ключ для доступа к инстансу, для подключения ssh -i ~/.ssh/github-actions-key ubuntu@<IP-инстанса>"
+}
+
+variable "backend_access_key" {
+  type        = string
+  description = "Access key для Object Storage (из статического ключа сервисного аккаунта)"
+}
+
+variable "backend_secret_key" {
+  type        = string
+  description = "Secret key для Object Storage"
+}
+
+variable "service_account_key_file" {
+  type        = string
+  description = "path file"
 }
 
 variable "cloud_id" {
@@ -12,25 +27,15 @@ variable "folder_id" {
   type        = string
 }
 
-variable "service_account_id" {
-  type        = string
-  sensitive   = true
-}
-
-variable "pgp_key" {
-  type        = string
-  sensitive   = true
-}
-
 variable "default_zone" {
   type        = string
   default     = "ru-central1-a"
-  description = "https://cloud.yandex.ru/docs/overview/concepts/geo-scope"
+  description = "https://cloud.yandexcloud.ru/docs/overview/concepts/geo-scope"
 }
 
 variable "vpc_name" {
   type        = string
-  default     = "prod"
+  default     = "vpc-network-prod"
   description = "VPC network&subnet name"
 }
 
@@ -38,8 +43,8 @@ variable "subnet_cidrs" {
   type = map(string)
   default = {
     public  = "192.168.10.0/24",
-    private1 = "192.168.20.0/24"
-    private2 = "192.168.30.0/24"
+    private1 = "192.168.20.0/24",
+    private2 = "192.168.30.0/24",
     private3 = "192.168.40.0/24"
   }
 }

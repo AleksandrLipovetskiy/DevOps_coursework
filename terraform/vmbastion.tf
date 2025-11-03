@@ -1,7 +1,7 @@
-resource "yandex_compute_instance" "web" {
+resource "yandex_compute_instance" "bastion" {
   count = 1
 
-  name        = "web-${count.index + 1}"
+  name        = "bastion"
   platform_id = var.instance_settings.platform_id
   zone        = var.default_zone
 
@@ -30,6 +30,6 @@ resource "yandex_compute_instance" "web" {
   }
 
   metadata = {
-    ssh-keys = "ubuntu:${file("~/.ssh/id_ed25519.pub")}"
+    ssh-keys = "ubuntu:${var.ssh_public_key}"
   }
 }

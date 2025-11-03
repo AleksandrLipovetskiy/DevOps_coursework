@@ -13,9 +13,3 @@ provider "yandex" {
   folder_id = var.folder_id
   zone      = var.default_zone
 }
-
-# Валидация существования файла
-validation "service_account_key_file" {
-  condition     = fileexists(var.service_account_key_file)
-  error_message = "Файл ключа ${var.service_account_key_file} не найден."
-}

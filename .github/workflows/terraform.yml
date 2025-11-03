@@ -2,13 +2,12 @@ name: Terraform Pipeline
 
 on:
   push:
-    branches: [main]  # ветки, где отслеживаем изменения
+    branches: [main]
     paths:
-      - 'terraform/**'           # запускать, если изменились файлы в terraform/
+      - 'terraform/**'
     paths-ignore:
-      - '**.md'                 # игнорировать изменения в .md файлах (даже в terraform/)
-      - 'docs/**'               # игнорировать изменения в docs/
-
+      - '**.md'
+      - 'docs/**'
   pull_request:
     branches: [main]
     paths:
@@ -20,6 +19,9 @@ on:
 jobs:
   terraform:
     runs-on: ubuntu-latest
+    env:
+      TF_VAR_service_account_key_file: ./key.json
+      TF_VAR_ssh_public_key: ${{ secrets.SSH_PUBLIC_KEY }}
 
     steps:
       - name: Checkout code
@@ -30,25 +32,23 @@ jobs:
         with:
           terraform_version: 1.9.x
 
-      - name: Write Yandex Key
+      - name: Create key.json for Yandex Cloud provider
         run: |
           echo '${{ secrets.YC_SERVICE_ACCOUNT_KEY }}' > ./terraform/key.json
-        env:
-          YC_SERVICE_ACCOUNT_KEY: ${{ secrets.YC_SERVICE_ACCOUNT_KEY }}
 
       - name: Terraform Init
         env:
           YC_ACCESS_KEY: ${{ secrets.YC_ACCESS_KEY }}
           YC_SECRET_KEY: ${{ secrets.YC_SECRET_KEY }}
-          TF_VAR_service_account_key_file: ./key.json
         run: |
           terraform init \
             -backend-config="access_key=${YC_ACCESS_KEY}" \
             -backend-config="secret_key=${YC_SECRET_KEY}"
-        working-directory: ./terraform  # указываем рабочую директорию
+        working-directory: ./terraform
 
       - name: Terraform Validate
         run: terraform validate
+        working-directory: ./terraform
 
       - name: Terraform Plan
         if: github.event_name == 'pull_request'
@@ -61,4 +61,3 @@ jobs:
           github.ref == 'refs/heads/main'
         run: terraform apply -auto-approve tfplan
         working-directory: ./terraform
-
