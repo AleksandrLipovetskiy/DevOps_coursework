@@ -2,6 +2,16 @@ name: Terraform Pipeline
 
 on:
   workflow_dispatch:
+    inputs:
+      action:
+        description: 'Action to perform (apply or destroy)'
+        required: true
+        default: 'apply'
+        type: choice
+        options:
+          - apply
+          - destroy
+  
   push:
     branches: [main]
     paths:
@@ -63,10 +73,23 @@ jobs:
 
       - name: Terraform Apply
         if: |
-          github.event_name == 'push' &&
-          github.ref == 'refs/heads/main'
+          (github.event_name == 'push' && github.ref == 'refs/heads/main') || 
+          (github.event_name == 'workflow_dispatch' && github.event.inputs.action == 'apply')
         env:
           TF_LOG: DEBUG
-        timeout-minutes: 10
         run: terraform apply -auto-approve
+        working-directory: ./terraform
+
+      - name: Terraform Plan Destroy
+        if: github.event_name == 'workflow_dispatch' && github.event.inputs.action == 'destroy'
+        env:
+          TF_LOG: DEBUG
+        run: terraform plan -destroy -out=tfplan-destroy
+        working-directory: ./terraform
+
+      - name: Terraform Destroy
+        if: github.event_name == 'workflow_dispatch' && github.event.inputs.action == 'destroy'
+        env:
+          TF_LOG: DEBUG
+        run: terraform destroy -auto-approve
         working-directory: ./terraform
