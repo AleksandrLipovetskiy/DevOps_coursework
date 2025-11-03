@@ -33,7 +33,7 @@ jobs:
 
       - name: Create key.json for Yandex Cloud provider
         run: |
-          echo '${{ secrets.YC_SERVICE_ACCOUNT_KEY }}' > ./terraform/key.json
+          printf '%s' '${{ secrets.YC_SERVICE_ACCOUNT_KEY }}' > ./terraform/key.json
 
       - name: Terraform Init
         env:
