@@ -5,16 +5,14 @@ on:
     branches: [main]
     paths:
       - 'terraform/**'
-    paths-ignore:
-      - '**.md'
-      - 'docs/**'
+      - '!**.md'
+      - '!docs/**'
   pull_request:
     branches: [main]
     paths:
       - 'terraform/**'
-    paths-ignore:
-      - '**.md'
-      - 'docs/**'
+      - '!**.md'
+      - '!docs/**'
 
 jobs:
   terraform:
