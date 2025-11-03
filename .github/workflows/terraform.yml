@@ -11,7 +11,6 @@ on:
     paths:
       - 'terraform/**'
 
-on:
   push:
     branches: [main]
     paths:
