@@ -4,16 +4,6 @@ variable "ssh_public_key" {
   description = "Публичный SSH‑ключ для доступа к инстансу, для подключения ssh -i ~/.ssh/github-actions-key ubuntu@<IP-инстанса>"
 }
 
-#variable "backend_access_key" {
-#  type        = string
-#  description = "Access key для Object Storage (из статического ключа сервисного аккаунта)"
-#}
-
-#variable "backend_secret_key" {
-#  type        = string
-#  description = "Secret key для Object Storage"
-#}
-
 variable "yc_token" {
   type        = string
   sensitive   = true
@@ -39,14 +29,17 @@ variable "vpc_name" {
   description = "VPC network&subnet name"
 }
 
-variable "subnet_cidrs" {
-  type = map(string)
-  default = {
-    public  = "192.168.10.0/24",
-    private1 = "192.168.20.0/24",
-    private2 = "192.168.30.0/24",
-    private3 = "192.168.40.0/24"
-  }
+
+variable "vpc_cidr" {
+  description = "CIDR block for VPC"
+  type = string
+  default = "10.0.0.0/16"
+}
+
+variable "subnet_cidr" {
+  description = "CIDR block for subnet"
+  type = string
+  default = "10.0.1.0/24"
 }
 
 data "yandex_compute_image" "ubuntu" {
