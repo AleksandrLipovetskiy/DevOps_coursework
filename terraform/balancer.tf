@@ -124,6 +124,8 @@ resource "yandex_alb_virtual_host" "k8s_web_host" {
 }
 
 resource "yandex_alb_backend_group" "k8s_web_backend_group" {
+  depends_on = [yandex_lb_target_group.k8s_web_targets]
+
   name = "k8s-web-backend-group"
   http_backend {
     name             = "web-backend"
