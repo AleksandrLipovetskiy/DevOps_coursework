@@ -57,6 +57,6 @@ variable "instance_settings" {
     hdd_size      = 20,
     hdd_type      = "network-hdd",
     preemptible   = true,
-    nat           = true
+    nat           = false
   }
 }
