@@ -25,10 +25,10 @@ output "registry_endpoint" {
 
 output "web_lb_address" {
   description = "External IP of the Web Load Balancer"
-  value       = yandex_alb_load_balancer.k8s_web_lb.listener[0].endpoint[0].address[0].external_ipv4_address[0].address
+  value = tolist(yandex_alb_load_balancer.k8s_web_lb.listener)[0].endpoint[0].address[0].external_ipv4_address[0].address
 }
 
 output "api_lb_address" {
   description = "External IP of the API Load Balancer"
-  value       = yandex_lb_network_load_balancer.k8s_api_lb.listener[0].external_address_spec[0].address
+  value = tolist(yandex_lb_network_load_balancer.k8s_api_lb.listener)[0].external_address_spec[0].address
 }
