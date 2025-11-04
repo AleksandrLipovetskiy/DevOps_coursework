@@ -3,12 +3,17 @@ resource "yandex_lb_target_group" "k8s_web_targets" {
   name      = "k8s-web-targets"
   region_id = "ru-central1"
 
-  dynamic "target" {
-    for_each = yandex_compute_instance.k8s_worker
-    content {
-      subnet_id = target.value.network_interface.0.subnet_id
-      address   = target.value.network_interface.0.ip_address
-    }
+  target {
+    subnet_id = yandex_vpc_subnet.k8s_subnet[0].id
+    address   = yandex_compute_instance.worker[0].network_interface.0.ip_address
+  }
+  target {
+    subnet_id = yandex_vpc_subnet.k8s_subnet[1].id
+    address   = yandex_compute_instance.worker[1].network_interface.0.ip_address
+  }
+  target {
+    subnet_id = yandex_vpc_subnet.k8s_subnet[2].id
+    address   = yandex_compute_instance.worker[2].network_interface.0.ip_address
   }
 }
 
@@ -43,12 +48,17 @@ resource "yandex_lb_target_group" "k8s_api_targets" {
   name      = "k8s-api-targets"
   region_id = "ru-central1"
 
-  dynamic "target" {
-    for_each = yandex_compute_instance.k8s_master
-    content {
-      subnet_id = target.value.network_interface.0.subnet_id
-      address   = target.value.network_interface.0.ip_address
-    }
+  target {
+    subnet_id = yandex_vpc_subnet.k8s_subnet[0].id
+    address   = yandex_compute_instance.master[0].network_interface.0.ip_address
+  }
+  target {
+    subnet_id = yandex_vpc_subnet.k8s_subnet[1].id
+    address   = yandex_compute_instance.master[1].network_interface.0.ip_address
+  }
+  target {
+    subnet_id = yandex_vpc_subnet.k8s_subnet[2].id
+    address   = yandex_compute_instance.master[2].network_interface.0.ip_address
   }
 }
 
@@ -106,9 +116,7 @@ resource "yandex_alb_virtual_host" "k8s_web_host" {
           prefix = "/"
         }
       }
-      http_backend {
-        backend_group_id = yandex_alb_backend_group.k8s_web_backend_group.id
-      }
+      backend_group_id = yandex_alb_backend_group.k8s_web_backend_group.id
     }
   }
 }

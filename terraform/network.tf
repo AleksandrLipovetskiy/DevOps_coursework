@@ -23,9 +23,3 @@ resource "yandex_vpc_route_table" "k8s_route_table" {
     gateway_id         = yandex_vpc_gateway.nat_gateway.id
   }
 }
-
-resource "yandex_vpc_subnet_route_table" "k8s_subnet_route" {
-  cuunt          = 3
-  subnet_id      = yandex_vpc_subnet.k8s_subnet[count.index].id
-  route_table_id = yandex_vpc_route_table.k8s_route_table.id
-}

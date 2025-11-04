@@ -1,11 +1,11 @@
 output "master_ips" {
   description = "Public IPs of the Kubernetes Master nodes"
-  value       = [for instance in yandex_compute_instance.k8s_master : instance.network_interface.0.nat_ip_address]
+  value       = [for instance in yandex_compute_instance.master : instance.network_interface.0.nat_ip_address]
 }
 
 output "worker_ips" {
   description = "Public IPs of the Kubernetes Worker nodes"
-  value       = [for instance in yandex_compute_instance.k8s_worker : instance.network_interface.0.nat_ip_address]
+  value       = [for instance in yandex_compute_instance.worker : instance.network_interface.0.nat_ip_address]
 }
 
 output "zabbix_ip" {
