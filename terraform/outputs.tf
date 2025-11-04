@@ -10,12 +10,12 @@ output "worker_ips" {
 
 output "zabbix_ip" {
   description = "Public IP of the Zabbix Server"
-  value       = yandex_compute_instance.zabbix.network_interface[0].nat_ip_address
+  value       = yandex_compute_instance.zabbix[0].network_interface[0].nat_ip_address
 }
 
 output "grafana_prometheus_ip" {
   description = "Public IP of the Grafana and Prometheus Server"
-  value       = yandex_compute_instance.grafana_prometheus.network_interface[0].nat_ip_address
+  value       = yandex_compute_instance.grafana_prometheus[0].network_interface[0].nat_ip_address
 }
 
 output "registry_endpoint" {
@@ -25,10 +25,14 @@ output "registry_endpoint" {
 
 output "web_lb_address" {
   description = "External IP of the Web Load Balancer"
-  value = tolist(yandex_alb_load_balancer.k8s_web_lb.listener)[0].endpoint[0].address[0].external_ipv4_address[0].address
+  value       = length(yandex_alb_load_balancer.k8s_web_lb.listener) > 0 && 
+                length(yandex_alb_load_balancer.k8s_web_lb.listener[0].endpoint) > 0 && 
+                length(yandex_alb_load_balancer.k8s_web_lb.listener[0].endpoint[0].address) > 0 && 
+                yandex_alb_load_balancer.k8s_web_lb.listener[0].endpoint[0].address[0].external_ipv4_address != null ? 
+                yandex_alb_load_balancer.k8s_web_lb.listener[0].endpoint[0].address[0].external_ipv4_address.address : null
 }
 
 output "api_lb_address" {
   description = "External IP of the API Load Balancer"
-  value = yandex_lb_network_load_balancer.k8s_api_lb.external_address
+  value       = length(yandex_lb_network_load_balancer.k8s_api_lb.allocated_ips) > 0 ? yandex_lb_network_load_balancer.k8s_api_lb.allocated_ips[0] : null
 }
