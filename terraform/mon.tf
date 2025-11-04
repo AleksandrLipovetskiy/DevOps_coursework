@@ -2,7 +2,7 @@
 resource "yandex_compute_instance" "zabbix" {
   name        = "zabbix"
   platform_id = var.instance_settings.platform_id
-  zone        = var.default_zone
+  zone        = var.zones[0]
   #hostname    = "zabbix"
 
   resources {
@@ -20,7 +20,7 @@ resource "yandex_compute_instance" "zabbix" {
   }
 
   network_interface {
-    subnet_id = yandex_vpc_subnet.k8s_subnet.id
+    subnet_id = yandex_vpc_subnet.k8s_subnet[0].id
     nat = var.instance_settings.nat
     security_group_ids = [yandex_vpc_security_group.k8s_sg.id]
   }
@@ -38,7 +38,7 @@ resource "yandex_compute_instance" "zabbix" {
 resource "yandex_compute_instance" "grafana_prometheus" {
   name        = "grafana-prometheus"
   platform_id = var.instance_settings.platform_id
-  zone        = var.default_zone
+  zone        = var.zones[0]
   #hostname    = "grafana_prometheus"
 
   resources {
@@ -56,7 +56,7 @@ resource "yandex_compute_instance" "grafana_prometheus" {
   }
 
   network_interface {
-    subnet_id = yandex_vpc_subnet.k8s_subnet.id
+    subnet_id = yandex_vpc_subnet.k8s_subnet[0].id
     nat = var.instance_settings.nat
     security_group_ids = [yandex_vpc_security_group.k8s_sg.id]
   }

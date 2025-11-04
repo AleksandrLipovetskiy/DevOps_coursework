@@ -1,12 +1,13 @@
 resource "yandex_vpc_network" "k8s_network" {
-  name = var.vpc_name
+  name = "k8s-network"
 }
 
 resource "yandex_vpc_subnet" "k8s_subnet" {
-  name           = "k8s_subnet"
-  zone           = var.default_zone
+  count          = 3
+  name           = "k8s-subnet-${var.zones[count.index]}"
+  zone           = var.zones[count.index]
   network_id     = yandex_vpc_network.k8s_network.id
-  v4_cidr_blocks = [var.subnet_cidr]
+  v4_cidr_blocks = [var.subnet_cidrs[count.index]]
 }
 
 resource "yandex_vpc_gateway" "nat_gateway" {
@@ -15,7 +16,7 @@ resource "yandex_vpc_gateway" "nat_gateway" {
 }
 
 resource "yandex_vpc_route_table" "k8s_route_table" {
-  name       = "k8s_route_table"
+  name       = "k8s-route-table"
   network_id = yandex_vpc_network.k8s_network.id
   static_route {
     destination_prefix = "0.0.0.0/0"
@@ -24,6 +25,7 @@ resource "yandex_vpc_route_table" "k8s_route_table" {
 }
 
 resource "yandex_vpc_subnet_route_table" "k8s_subnet_route" {
-  subnet_id      = yandex_vpc_subnet.k8s_subnet.id
+  cuunt          = 3
+  subnet_id      = yandex_vpc_subnet.k8s_subnet[count.index].id
   route_table_id = yandex_vpc_route_table.k8s_route_table.id
 }

@@ -1,8 +1,8 @@
 resource "yandex_compute_instance" "master" {
-  
-  name        = "master"
+  count       = 3
+  name        = "master-${count.index + 1}"
   platform_id = var.instance_settings.platform_id
-  zone        = var.default_zone
+  zone        = var.zones[count.index]
 
   resources {
     cores         = var.instance_settings.core_count
@@ -19,7 +19,7 @@ resource "yandex_compute_instance" "master" {
   }
 
   network_interface {
-    subnet_id = yandex_vpc_subnet.k8s_subnet.id
+    subnet_id = yandex_vpc_subnet.k8s_subnet[count.index].id
     nat = var.instance_settings.nat
     security_group_ids = [yandex_vpc_security_group.k8s_sg.id]
   }

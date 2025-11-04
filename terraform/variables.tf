@@ -17,18 +17,10 @@ variable "folder_id" {
   type        = string
 }
 
-variable "default_zone" {
-  type        = string
-  default     = "ru-central1-a"
-  description = "https://cloud.yandexcloud.ru/docs/overview/concepts/geo-scope"
+variable "zones" {
+  type        = list(string)
+  default     = ["ru-central1-a", "ru-central1-b", "ru-central1-c"]
 }
-
-variable "vpc_name" {
-  type        = string
-  default     = "vpc-network-prod"
-  description = "VPC network&subnet name"
-}
-
 
 variable "vpc_cidr" {
   description = "CIDR block for VPC"
@@ -36,10 +28,10 @@ variable "vpc_cidr" {
   default = "10.0.0.0/16"
 }
 
-variable "subnet_cidr" {
+variable "subnet_cidrs" {
   description = "CIDR block for subnet"
-  type = string
-  default = "10.0.1.0/24"
+  type = list(string)
+  default = ["10.0.1.0/24", "10.0.2.0/24", "10.0.3.0/24"]
 }
 
 data "yandex_compute_image" "ubuntu" {
