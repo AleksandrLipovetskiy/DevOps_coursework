@@ -1,0 +1,131 @@
+@startuml
+!define CLOUD_COLOR #LightBlue
+!define VPC_COLOR #LightGreen
+!define SUBNET_COLOR #LightYellow
+!define NODE_COLOR #LightCoral
+!define GATEWAY_COLOR #LightGray
+!define MONITORING_COLOR #LightPink
+!define REGISTRY_COLOR #LightCyan
+!define LB_COLOR #LightSalmon
+
+skinparam componentStyle uml2
+skinparam nodesep 50
+skinparam ranksep 50
+skinparam linetype ortho
+
+cloud "Yandex Cloud" as YC CLOUD_COLOR {
+    package "VPC: k8s-network" as VPC VPC_COLOR {
+        package "Subnet: ru-central1-a" as SubnetA SUBNET_COLOR {
+            node "k8s-master-1" as Master1 NODE_COLOR {
+                [Kubernetes API Server]
+                [Etcd]
+            }
+            node "k8s-worker-1" as Worker1 NODE_COLOR {
+                [Kubelet]
+            }
+            node "zabbix-server" as Zabbix MONITORING_COLOR {
+                [Zabbix Server]
+            }
+            node "grafana-prometheus" as GrafProm MONITORING_COLOR {
+                [Grafana]
+            }
+        }
+        package "Subnet: ru-central1-b" as SubnetB SUBNET_COLOR {
+            node "k8s-master-2" as Master2 NODE_COLOR {
+                [Kubernetes API Server]
+                [Etcd]
+            }
+            node "k8s-worker-2" as Worker2 NODE_COLOR {
+                [Kubelet]
+            }
+        }
+        package "Subnet: ru-central1-c" as SubnetC SUBNET_COLOR {
+            node "k8s-master-3" as Master3 NODE_COLOR {
+                [Kubernetes API Server]
+                [Etcd]
+            }
+            node "k8s-worker-3" as Worker3 NODE_COLOR {
+                [Kubelet]
+            }
+        }
+    }
+
+    component "NAT Gateway" as NAT GATEWAY_COLOR
+    component "Route Table" as RouteTable GATEWAY_COLOR
+    component "Container Registry" as Registry REGISTRY_COLOR {
+        [app-repo]
+    }
+    component "API Load Balancer" as ApiLB LB_COLOR
+    component "Web Load Balancer" as WebLB LB_COLOR
+}
+
+' Связи между компонентами Kubernetes (управление кластером)
+Master1 -down-> Worker1 : kubeadm join
+Master1 -down-> Worker2 : kubeadm join
+Master1 -down-> Worker3 : kubeadm join
+
+' Связи между мастерами для Etcd кластера
+Master1 -right-> Master2 : Etcd Cluster
+Master2 -down-> Master3 : Etcd Cluster
+Master1 -down-> Master3 : Etcd Cluster
+
+' Балансировщики нагрузки
+ApiLB -down-> Master1 : API (6443)
+ApiLB -down-> Master2 : API (6443)
+ApiLB -down-> Master3 : API (6443)
+WebLB -down-> Worker1 : HTTP/HTTPS
+WebLB -down-> Worker2 : HTTP/HTTPS
+WebLB -down-> Worker3 : HTTP/HTTPS
+
+' Связи для Docker-образов (только от одного мастера и воркера для упрощения)
+Master1 -up-> Registry : Pull/Push Images
+Worker1 -up-> Registry : Pull Images
+
+' Связи для мониторинга (только основные для читаемости)
+Zabbix -down-> Master1 : Monitor
+Zabbix -down-> Worker1 : Monitor
+GrafProm -down-> Master1 : Metrics
+GrafProm -down-> Worker1 : Metrics
+
+' Сетевые связи (обобщенные для читаемости)
+SubnetA -right-> NAT : Outbound
+SubnetB -right-> NAT : Outbound
+SubnetC -right-> NAT : Outbound
+SubnetA -right-> RouteTable : Routing
+SubnetB -right-> RouteTable : Routing
+SubnetC -right-> RouteTable : Routing
+NAT -up-> "Internet" : Egress
+
+' Группа безопасности (правила)
+frame "Security Group: k8s-sg" as SG {
+    note right of SG
+        - SSH (22)
+        - Kubernetes API (6443)
+        - HTTP (80)
+        - HTTPS (443)
+        - Zabbix (10051, 8080)
+        - Grafana (3000)
+        - Prometheus (9090)
+        - Internal Traffic (All)
+    end note
+}
+
+' Привязка группы безопасности (только к основным узлам для упрощения)
+SG -down-> Master1
+SG -down-> Worker1
+SG -down-> Zabbix
+SG -down-> GrafProm
+
+' Пользователи и их доступ
+cloud "Users" as Users {
+    [Web App Users]
+    [Monitoring Admins]
+    [Cluster Admins]
+}
+
+Users -down-> WebLB : Web Traffic
+Users -down-> ApiLB : API Access
+Users -down-> Zabbix : Zabbix UI
+Users -down-> GrafProm : Grafana UI
+
+@enduml
