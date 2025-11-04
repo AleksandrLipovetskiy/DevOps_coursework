@@ -106,8 +106,9 @@ resource "yandex_alb_http_router" "k8s_web_router" {
 }
 
 resource "yandex_alb_virtual_host" "k8s_web_host" {
-  name           = "k8s-web-host"
-  http_router_id = yandex_alb_http_router.k8s_web_router.id
+  name            = "k8s-web-host"
+  http_router_id  = yandex_alb_http_router.k8s_web_router.id
+
   route {
     name = "default-route"
     http_route {
@@ -116,7 +117,9 @@ resource "yandex_alb_virtual_host" "k8s_web_host" {
           prefix = "/"
         }
       }
-      backend_group_id = yandex_alb_backend_group.k8s_web_backend_group.id
+      http_route_action {
+        backend_group_id = yandex_alb_backend_group.k8s_web_backend_group.id
+      }
     }
   }
 }

@@ -1,21 +1,21 @@
 output "master_ips" {
   description = "Public IPs of the Kubernetes Master nodes"
-  value       = [for instance in yandex_compute_instance.master : instance.network_interface.0.nat_ip_address]
+  value       = [for instance in yandex_compute_instance.master : instance.network_interface[0].nat_ip_address]
 }
 
 output "worker_ips" {
   description = "Public IPs of the Kubernetes Worker nodes"
-  value       = [for instance in yandex_compute_instance.worker : instance.network_interface.0.nat_ip_address]
+  value       = [for instance in yandex_compute_instance.worker : instance.network_interface[0].nat_ip_address]
 }
 
 output "zabbix_ip" {
   description = "Public IP of the Zabbix Server"
-  value       = yandex_compute_instance.zabbix_server.network_interface.0.nat_ip_address
+  value       = yandex_compute_instance.zabbix.network_interface.0.nat_ip_address
 }
 
 output "grafana_prometheus_ip" {
   description = "Public IP of the Grafana and Prometheus Server"
-  value       = yandex_compute_instance.grafana_prometheus.network_interface.0.nat_ip_address
+  value       = yandex_compute_instance.grafana_prometheus.network_interface[0].nat_ip_address
 }
 
 output "registry_endpoint" {
