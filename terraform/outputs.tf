@@ -10,7 +10,7 @@ output "worker_ips" {
 
 output "zabbix_ip" {
   description = "Public IP of the Zabbix Server"
-  value       = yandex_compute_instance.zabbix.network_interface.0.nat_ip_address
+  value       = yandex_compute_instance.zabbix.network_interface[0].nat_ip_address
 }
 
 output "grafana_prometheus_ip" {
@@ -30,5 +30,5 @@ output "web_lb_address" {
 
 output "api_lb_address" {
   description = "External IP of the API Load Balancer"
-  value = tolist(yandex_lb_network_load_balancer.k8s_api_lb.listener)[0].external_address_spec[0].address
+  value = yandex_lb_network_load_balancer.k8s_api_lb.external_address
 }
