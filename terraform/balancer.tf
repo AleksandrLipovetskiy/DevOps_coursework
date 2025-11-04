@@ -20,7 +20,7 @@ resource "yandex_lb_target_group" "k8s_web_targets" {
 # Создание сетевого балансировщика нагрузки для Kubernetes API (мастер-ноды)
 resource "yandex_lb_network_load_balancer" "k8s_api_lb" {
   name = "k8s-api-lb"
-  type = "EXTERNAL"
+  type = "external"
   listener {
     name        = "api-listener"
     port        = 6443
