@@ -51,7 +51,7 @@ jobs:
         continue-on-error: true
       
       - name: Terraform Validate
-        working-directory: ./terraform/01-infrastructure
+        working-directory: ./terraform/terraform
         run: |
           echo "Validating Terraform config..."
           terraform init -backend=false
@@ -87,7 +87,7 @@ jobs:
           terraform_version: ~1.8.0
       
       - name: Terraform Init
-        working-directory: ./terraform/01-infrastructure
+        working-directory: ./terraform/terraform
         run: |
           terraform init \
             -backend-config="bucket=devops-tfstate" \
@@ -96,7 +96,7 @@ jobs:
             -backend-config="encrypt=true"
       
       - name: Terraform Plan
-        working-directory: ./terraform/01-infrastructure
+        working-directory: ./terraform/terraform
         id: plan
         run: |
           terraform plan -out=tfplan -lock=false
@@ -107,7 +107,7 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: tfplan
-          path: terraform/01-infrastructure/tfplan
+          path: terraform/terraform/tfplan
           retention-days: 7
 
   terraform-apply:
@@ -139,7 +139,7 @@ jobs:
           terraform_version: ~1.8.0
       
       - name: Terraform Init
-        working-directory: ./terraform/01-infrastructure
+        working-directory: ./terraform/terraform
         run: |
           terraform init \
             -backend-config="bucket=devops-tfstate" \
@@ -148,13 +148,13 @@ jobs:
             -backend-config="encrypt=true"
       
       - name: Terraform Apply
-        working-directory: ./terraform/01-infrastructure
+        working-directory: ./terraform/terraform
         run: |
           terraform apply -auto-approve -lock=false
       
       - name: Save Terraform Outputs
         if: success()
-        working-directory: ./terraform/01-infrastructure
+        working-directory: ./terraform/terraform
         run: |
           terraform output -json > terraform_outputs.json
       
@@ -163,7 +163,7 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: terraform-outputs
-          path: terraform/01-infrastructure/terraform_outputs.json
+          path: terraform/terraform/terraform_outputs.json
           retention-days: 30
 
   terraform-destroy:
@@ -193,7 +193,7 @@ jobs:
           terraform_version: ~1.8.0
       
       - name: Terraform Init
-        working-directory: ./terraform/01-infrastructure
+        working-directory: ./terraform/terraform
         run: |
           terraform init \
             -backend-config="bucket=devops-tfstate" \
@@ -202,13 +202,13 @@ jobs:
             -backend-config="encrypt=true"
       
       - name: Terraform Plan Destroy
-        working-directory: ./terraform/01-infrastructure
+        working-directory: ./terraform/terraform
         run: |
           echo "WARNING: Planning destruction of all infrastructure!"
           terraform plan -destroy -out=tfdestroy.plan -lock=false
       
       - name: Terraform Destroy
-        working-directory: ./terraform/01-infrastructure
+        working-directory: ./terraform/terraform
         run: |
           echo "WARNING: This will DESTROY all infrastructure!"
           echo "Review the plan above before proceeding."
