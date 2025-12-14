@@ -1,0 +1,45 @@
+# Example Terraform variables file
+# Copy this file to terraform.tfvars and fill in with your values
+# Do NOT commit terraform.tfvars to git (add to .gitignore)
+
+# Yandex Cloud authentication and location
+yc_token    = "y0_YOUR_YC_TOKEN_HERE"  # Get from: yc iam create-token
+cloud_id    = "b1g12345abcd"           # Get from: yc config get cloud-id
+folder_id   = "b1gpppp9999"            # Get from: yc config get folder-id
+
+# Network configuration
+vpc_cidr = "10.0.0.0/16"
+subnet_cidrs = [
+  "10.0.1.0/24",  # AZ ru-central1-a
+  "10.0.2.0/24",  # AZ ru-central1-b
+  "10.0.3.0/24"   # AZ ru-central1-d
+]
+zones = ["ru-central1-a", "ru-central1-b", "ru-central1-d"]
+
+# Kubernetes cluster configuration
+cluster_name          = "devops-k8s-cluster"
+cluster_version       = "1.28"  # Managed K8s version
+cluster_network_name  = "devops-vpc"
+
+# Node group configuration
+node_count        = 3  # Number of K8s nodes
+machine_type      = "standard-2"  # 2 vCPU, 4 GB RAM
+node_boot_disk_size = 30  # GB
+core_fraction     = 20  # Percentage of CPU
+
+# Instance configuration for nodes
+instance_settings = {
+  platform_id = "standard-v2"
+  core_count  = 2
+  memory_gb   = 4
+}
+
+# Container Registry
+registry_name = "devops-registry"
+
+# SSH public key (for debugging nodes)
+ssh_public_key = "ssh-rsa AAAA... your_public_key@host"  # Replace with your public key
+
+# Environment tags
+environment = "diploma"
+project     = "netology-devops"

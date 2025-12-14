@@ -1,4 +1,12 @@
-name: Terraform Pipeline
+# GitHub Actions Workflow для Terraform Infrastructure as Code
+# Требуемые GitHub Secrets (установить в Settings > Secrets):
+#   - YC_TOKEN: OAuth token для Yandex Cloud API
+#   - YC_CLOUD_ID: ID облака в Yandex Cloud
+#   - YC_FOLDER_ID: ID папки в Yandex Cloud
+#   - AWS_ACCESS_KEY_ID: Access key для S3 backend
+#   - AWS_SECRET_ACCESS_KEY: Secret key для S3 backend
+
+name: Terraform CI/CD Pipeline
 
 on:
   workflow_dispatch:
@@ -13,83 +21,193 @@ on:
           - destroy
   
   push:
-    branches: [main]
+    branches:
+      - main
+      - develop
     paths:
       - 'terraform/**'
-      - '!**.md'
-      - '!docs/**'
+      - '.github/workflows/terraform.yml'
+  
   pull_request:
-    branches: [main]
+    branches:
+      - main
     paths:
       - 'terraform/**'
-      - '!**.md'
-      - '!docs/**'
+      - '.github/workflows/terraform.yml'
 
 jobs:
-  terraform:
+  terraform-checks:
+    name: Terraform Format & Validation
     runs-on: ubuntu-latest
-    env:
-      TF_VAR_ssh_public_key: ${{ secrets.SSH_PUBLIC_KEY }}
-      #TF_VAR_backend_access_key: ${{ secrets.YC_ACCESS_KEY }}
-      #TF_VAR_backend_secret_key: ${{ secrets.YC_SECRET_KEY }}
-      TF_VAR_cloud_id: ${{ secrets.YC_CLOUD_ID }}
-      TF_VAR_folder_id: ${{ secrets.YC_FOLDER_ID }}
-      TF_VAR_yc_token: ${{ secrets.YC_IAM_TOKEN }}
-
+    permissions:
+      contents: read
+      pull-requests: write
+    
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
-
+        with:
+          fetch-depth: 0
+      
       - name: Setup Terraform
         uses: hashicorp/setup-terraform@v3
         with:
-          terraform_version: latest
+          terraform_version: ~1.6.0
+      
+      - name: Terraform Format Check
+        run: |
+          echo "Checking HCL formatting..."
+          terraform fmt -recursive -check -diff terraform/
+        continue-on-error: true
+      
+      - name: Terraform Validate
+        working-directory: ./terraform/01-infrastructure
+        run: |
+          echo "Validating Terraform config..."
+          terraform init -backend=false
+          terraform validate
 
+  terraform-plan:
+    name: Terraform Plan
+    runs-on: ubuntu-latest
+    needs: terraform-checks
+    if: github.event_name == 'pull_request' || github.event_name == 'push'
+    permissions:
+      contents: read
+      pull-requests: write
+    
+    env:
+      TF_VAR_yc_token: ${{ secrets.YC_TOKEN }}
+      TF_VAR_yc_cloud_id: ${{ secrets.YC_CLOUD_ID }}
+      TF_VAR_yc_folder_id: ${{ secrets.YC_FOLDER_ID }}
+      AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+      AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+      AWS_REGION: ru-central1
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: ~1.6.0
+      
       - name: Terraform Init
-        env:
-          YC_ACCESS_KEY: ${{ secrets.YC_ACCESS_KEY }}
-          YC_SECRET_KEY: ${{ secrets.YC_SECRET_KEY }}
+        working-directory: ./terraform/01-infrastructure
         run: |
           terraform init \
-            -backend-config="access_key=${YC_ACCESS_KEY}" \
-            -backend-config="secret_key=${YC_SECRET_KEY}"
-        working-directory: ./terraform
-
-      - name: Terraform Validate
-        run: terraform validate
-        working-directory: ./terraform
-
+            -backend-config="bucket=devops-tfstate" \
+            -backend-config="key=infrastructure.tfstate" \
+            -backend-config="region=ru-central1" \
+            -backend-config="encrypt=true"
+      
       - name: Terraform Plan
-        if: github.event_name == 'pull_request'
-        run: terraform plan -out=tfplan
-        working-directory: ./terraform
- 
-      - name: Upload Terraform Plan
-        if: github.event_name == 'pull_request'
-        uses: actions/upload-artifact@v4       
+        working-directory: ./terraform/01-infrastructure
+        id: plan
+        run: |
+          terraform plan -out=tfplan -lock=false
+        continue-on-error: true
+
+  terraform-apply:
+    name: Terraform Apply
+    runs-on: ubuntu-latest
+    needs: terraform-plan
+    if: |
+      (github.event_name == 'push' && github.ref == 'refs/heads/main') || \
+      (github.event_name == 'workflow_dispatch' && github.event.inputs.action == 'apply')
+    permissions:
+      contents: read
+      pull-requests: write
+    
+    env:
+      TF_VAR_yc_token: ${{ secrets.YC_TOKEN }}
+      TF_VAR_yc_cloud_id: ${{ secrets.YC_CLOUD_ID }}
+      TF_VAR_yc_folder_id: ${{ secrets.YC_FOLDER_ID }}
+      AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+      AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+      AWS_REGION: ru-central1
+      TF_LOG: DEBUG
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
         with:
-          name: terraform-plan
-          path: ./terraform/tfplan
-
+          terraform_version: ~1.6.0
+      
+      - name: Terraform Init
+        working-directory: ./terraform/01-infrastructure
+        run: |
+          terraform init \
+            -backend-config="bucket=devops-tfstate" \
+            -backend-config="key=infrastructure.tfstate" \
+            -backend-config="region=ru-central1" \
+            -backend-config="encrypt=true"
+      
       - name: Terraform Apply
-        if: |
-          (github.event_name == 'push' && github.ref == 'refs/heads/main') || 
-          (github.event_name == 'workflow_dispatch' && github.event.inputs.action == 'apply')
-        env:
-          TF_LOG: DEBUG
-        run: terraform apply -auto-approve
-        working-directory: ./terraform
+        working-directory: ./terraform/01-infrastructure
+        run: |
+          terraform apply -auto-approve -lock=false
+      
+      - name: Save Terraform Outputs
+        if: success()
+        working-directory: ./terraform/01-infrastructure
+        run: |
+          terraform output -json > terraform_outputs.json
+      
+      - name: Upload Outputs as Artifact
+        if: success()
+        uses: actions/upload-artifact@v3
+        with:
+          name: terraform-outputs
+          path: terraform/01-infrastructure/terraform_outputs.json
+          retention-days: 30
 
-      - name: Terraform Plan Destroy
-        if: github.event_name == 'workflow_dispatch' && github.event.inputs.action == 'destroy'
-        env:
-          TF_LOG: DEBUG
-        run: terraform plan -destroy -out=tfplan-destroy
-        working-directory: ./terraform
-
+  terraform-destroy:
+    name: Terraform Destroy
+    runs-on: ubuntu-latest
+    if: github.event_name == 'workflow_dispatch' && github.event.inputs.action == 'destroy'
+    permissions:
+      contents: read
+    
+    env:
+      TF_VAR_yc_token: ${{ secrets.YC_TOKEN }}
+      TF_VAR_yc_cloud_id: ${{ secrets.YC_CLOUD_ID }}
+      TF_VAR_yc_folder_id: ${{ secrets.YC_FOLDER_ID }}
+      AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+      AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+      AWS_REGION: ru-central1
+      TF_LOG: DEBUG
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: ~1.6.0
+      
+      - name: Terraform Init
+        working-directory: ./terraform/01-infrastructure
+        run: |
+          terraform init \
+            -backend-config="bucket=devops-tfstate" \
+            -backend-config="key=infrastructure.tfstate" \
+            -backend-config="region=ru-central1" \
+            -backend-config="encrypt=true"
+      
       - name: Terraform Destroy
-        if: github.event_name == 'workflow_dispatch' && github.event.inputs.action == 'destroy'
-        env:
-          TF_LOG: DEBUG
-        run: terraform destroy -auto-approve
-        working-directory: ./terraform
+        working-directory: ./terraform/01-infrastructure
+        run: |
+          echo "WARNING: Destroying all infrastructure!"
+          terraform destroy -auto-approve -lock=false
+      
+      - name: Confirm Destruction
+        if: success()
+        run: |
+          echo "Infrastructure has been destroyed"
+          echo "All resources in Yandex Cloud have been deleted"
