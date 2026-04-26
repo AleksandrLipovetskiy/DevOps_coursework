@@ -25,13 +25,8 @@ on:
       - '!**.md'
       - '!docs/**'
 
-permissions:
-  contents: read
-  pull-requests: write
-
 jobs:
   terraform:
-    name: Terraform
     runs-on: ubuntu-latest
     defaults:
       run:
@@ -57,7 +52,6 @@ jobs:
           printf '%s\n' '${{ secrets.YC_SERVICE_ACCOUNT_KEY }}' > key.json
 
       - name: Terraform Init
-        id: init
         env:
           YC_ACCESS_KEY: ${{ secrets.YC_ACCESS_KEY }}
           YC_SECRET_KEY: ${{ secrets.YC_SECRET_KEY }}
@@ -66,108 +60,14 @@ jobs:
             -backend-config="access_key=${YC_ACCESS_KEY}" \
             -backend-config="secret_key=${YC_SECRET_KEY}"
 
-      - name: Terraform Format Check
-        id: fmt
-        run: terraform fmt -check -recursive
-        continue-on-error: true
-
       - name: Terraform Validate
-        id: validate
         run: terraform validate -no-color
 
       - name: Terraform Plan
-        id: plan
         if: |
           github.event_name == 'pull_request' ||
           (github.event_name == 'workflow_dispatch' && github.event.inputs.workflow_action == 'plan')
-        run: |
-          terraform plan -input=false -no-color -out=tfplan 2>&1 | tee plan_output.txt
-          echo "exitcode=${PIPESTATUS[0]}" >> $GITHUB_OUTPUT
-        continue-on-error: true
-
-      # ---------------------------------------------------------------
-      # Комментарий в PR с результатом terraform plan
-      # ---------------------------------------------------------------
-      - name: Comment PR with Terraform Plan
-        uses: actions/github-script@v7
-        if: github.event_name == 'pull_request'
-        env:
-          PLAN_OUTPUT: ${{ steps.plan.outputs.stdout }}
-        with:
-          github-token: ${{ secrets.GITHUB_TOKEN }}
-          script: |
-            const fs = require('fs');
-
-            let planOutput = '';
-            try {
-              planOutput = fs.readFileSync('./terraform/plan_output.txt', 'utf8');
-            } catch(e) {
-              planOutput = 'Could not read plan output.';
-            }
-
-            // Обрезаем до 60000 символов чтобы не превысить лимит GitHub
-            if (planOutput.length > 60000) {
-              planOutput = planOutput.substring(0, 60000) + '\n\n... (output truncated)';
-            }
-
-            const fmtStatus = '${{ steps.fmt.outcome }}' === 'success' ? '✅' : '⚠️';
-            const validateStatus = '${{ steps.validate.outcome }}' === 'success' ? '✅' : '❌';
-            const planStatus = '${{ steps.plan.outcome }}' === 'success' ? '✅' : '❌';
-
-            const output = `## 🔧 Terraform Plan Results
-
-            | Step | Status |
-            |------|--------|
-            | Format | ${fmtStatus} \`${{ steps.fmt.outcome }}\` |
-            | Validate | ${validateStatus} \`${{ steps.validate.outcome }}\` |
-            | Plan | ${planStatus} \`${{ steps.plan.outcome }}\` |
-
-            <details>
-            <summary>📋 Show Plan Output</summary>
-
-            \`\`\`terraform
-            ${planOutput}
-            \`\`\`
-
-            </details>
-
-            > **Pusher:** @${{ github.actor }}
-            > **Commit:** \`${{ github.sha }}\`
-            > **Workflow:** \`${{ github.workflow }}\`
-
-            ⚠️ *Merge this PR to trigger \`terraform apply\` on \`main\`.*`;
-
-            // Найти существующий комментарий от бота и обновить его, чтобы не спамить
-            const { data: comments } = await github.rest.issues.listComments({
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              issue_number: context.issue.number,
-            });
-
-            const botComment = comments.find(comment =>
-              comment.user.type === 'Bot' &&
-              comment.body.includes('Terraform Plan Results')
-            );
-
-            if (botComment) {
-              await github.rest.issues.updateComment({
-                owner: context.repo.owner,
-                repo: context.repo.repo,
-                comment_id: botComment.id,
-                body: output,
-              });
-            } else {
-              await github.rest.issues.createComment({
-                owner: context.repo.owner,
-                repo: context.repo.repo,
-                issue_number: context.issue.number,
-                body: output,
-              });
-            }
-
-      - name: Fail if plan failed
-        if: steps.plan.outcome == 'failure'
-        run: exit 1
+        run: terraform plan -input=false -out=tfplan
 
       - name: Terraform Apply
         if: |
@@ -175,10 +75,86 @@ jobs:
           (github.event_name == 'workflow_dispatch' && github.event.inputs.workflow_action == 'apply')
         run: terraform apply -auto-approve -input=false
 
+            - name: Terraform Apply
+        if: |
+          (github.event_name == 'push' && github.ref == 'refs/heads/main') ||
+          (github.event_name == 'workflow_dispatch' && github.event.inputs.workflow_action == 'apply')
+        run: terraform apply -auto-approve -input=false -no-color
+        working-directory: ./terraform
+
+      # ─── НОВЫЕ ШАГИ ───────────────────────────────────────────
+
+      - name: Install Yandex Cloud CLI
+        if: |
+          (github.event_name == 'push' && github.ref == 'refs/heads/main') ||
+          (github.event_name == 'workflow_dispatch' && github.event.inputs.workflow_action == 'apply')
+        run: |
+          curl -sSL https://storage.yandexcloud.net/yandexcloud-yc/install.sh | bash
+          echo "$HOME/yandex-cloud/bin" >> $GITHUB_PATH
+
+      - name: Get kubeconfig
+        if: |
+          (github.event_name == 'push' && github.ref == 'refs/heads/main') ||
+          (github.event_name == 'workflow_dispatch' && github.event.inputs.workflow_action == 'apply')
+        run: |
+          echo '${{ secrets.YC_SERVICE_ACCOUNT_KEY }}' > /tmp/sa-key.json
+          $HOME/yandex-cloud/bin/yc config set service-account-key /tmp/sa-key.json
+          $HOME/yandex-cloud/bin/yc config set cloud-id "${{ secrets.YC_CLOUD_ID }}"
+          $HOME/yandex-cloud/bin/yc config set folder-id "${{ secrets.YC_FOLDER_ID }}"
+          $HOME/yandex-cloud/bin/yc managed-kubernetes cluster get-credentials \
+            app-nspc-cluster --region ru-central1 --external --force
+
+      - name: Install Helm
+        if: |
+          (github.event_name == 'push' && github.ref == 'refs/heads/main') ||
+          (github.event_name == 'workflow_dispatch' && github.event.inputs.workflow_action == 'apply')
+        uses: azure/setup-helm@v4
+        with:
+          version: 'latest'
+
+      - name: Deploy Monitoring (Grafana + Prometheus)
+        if: |
+          (github.event_name == 'push' && github.ref == 'refs/heads/main') ||
+          (github.event_name == 'workflow_dispatch' && github.event.inputs.workflow_action == 'apply')
+        run: |
+          helm repo add prometheus-community https://prometheus-community.github.io/helm-charts
+          helm repo update
+          helm upgrade --install kube-prometheus-stack \
+            prometheus-community/kube-prometheus-stack \
+            --namespace monitoring \
+            --create-namespace \
+            -f helm/kube-prometheus-stack-values.yaml \
+            --wait \
+            --timeout 10m
+
+      - name: Deploy App manifests
+        if: |
+          (github.event_name == 'push' && github.ref == 'refs/heads/main') ||
+          (github.event_name == 'workflow_dispatch' && github.event.inputs.workflow_action == 'apply')
+        run: |
+          kubectl apply -f https://raw.githubusercontent.com/AleksandrLipovetskiy/app-nspc/main/k8s/namespace.yaml
+          kubectl apply -f https://raw.githubusercontent.com/AleksandrLipovetskiy/app-nspc/main/k8s/service.yaml
+          kubectl apply -f https://raw.githubusercontent.com/AleksandrLipovetskiy/app-nspc/main/k8s/deployment.yaml
+
+      - name: Get endpoints
+        if: |
+          (github.event_name == 'push' && github.ref == 'refs/heads/main') ||
+          (github.event_name == 'workflow_dispatch' && github.event.inputs.workflow_action == 'apply')
+        run: |
+          echo "### Endpoints" >> $GITHUB_STEP_SUMMARY
+          echo "**App:**" >> $GITHUB_STEP_SUMMARY
+          kubectl get svc app-nspc -n app-nspc >> $GITHUB_STEP_SUMMARY || true
+          echo "**Grafana:**" >> $GITHUB_STEP_SUMMARY
+          kubectl get svc -n monitoring | grep grafana >> $GITHUB_STEP_SUMMARY || true
+
+      - name: Cleanup
+        if: always()
+        run: rm -f /tmp/sa-key.json    
+
       - name: Terraform Destroy
         if: github.event_name == 'workflow_dispatch' && github.event.inputs.workflow_action == 'destroy'
         run: terraform destroy -auto-approve -input=false
 
       - name: Cleanup sensitive files
         if: always()
-        run: rm -f key.json tfplan plan_output.txt
+        run: rm -f key.json tfplan
