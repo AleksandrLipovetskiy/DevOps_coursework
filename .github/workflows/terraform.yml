@@ -152,7 +152,7 @@ jobs:
           kubectl get svc app-nspc -n app-nspc >> $GITHUB_STEP_SUMMARY || true
           echo "**Grafana:**" >> $GITHUB_STEP_SUMMARY
           kubectl get svc -n monitoring | grep grafana >> $GITHUB_STEP_SUMMARY || true
-        echo "**Pods:**" >> $GITHUB_STEP_SUMMARY
+        echo '**Pods:**' >> $GITHUB_STEP_SUMMARY
         kubectl get pods -n app-nspc -o wide >> $GITHUB_STEP_SUMMARY || true
         kubectl describe pods -n app-nspc >> $GITHUB_STEP_SUMMARY || true
 
