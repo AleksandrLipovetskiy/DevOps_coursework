@@ -110,6 +110,7 @@ jobs:
         if: |
           (github.event_name == 'push' && github.ref == 'refs/heads/main') ||
           (github.event_name == 'workflow_dispatch' && github.event.inputs.workflow_action == 'apply')
+        working-directory: ${{ github.workspace }}
         run: |
           helm repo add prometheus-community https://prometheus-community.github.io/helm-charts
           helm repo update
@@ -117,7 +118,7 @@ jobs:
             prometheus-community/kube-prometheus-stack \
             --namespace monitoring \
             --create-namespace \
-            -f helm/kube-prometheus-stack-values.yaml \
+            -f $GITHUB_WORKSPACE/helm/kube-prometheus-stack-values.yaml \
             --wait \
             --timeout 10m
 
