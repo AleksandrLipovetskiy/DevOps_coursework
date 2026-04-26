@@ -25,8 +25,13 @@ on:
       - '!**.md'
       - '!docs/**'
 
+permissions:
+  contents: read
+  pull-requests: write
+
 jobs:
   terraform:
+    name: Terraform
     runs-on: ubuntu-latest
     defaults:
       run:
@@ -52,6 +57,7 @@ jobs:
           printf '%s\n' '${{ secrets.YC_SERVICE_ACCOUNT_KEY }}' > key.json
 
       - name: Terraform Init
+        id: init
         env:
           YC_ACCESS_KEY: ${{ secrets.YC_ACCESS_KEY }}
           YC_SECRET_KEY: ${{ secrets.YC_SECRET_KEY }}
@@ -60,14 +66,108 @@ jobs:
             -backend-config="access_key=${YC_ACCESS_KEY}" \
             -backend-config="secret_key=${YC_SECRET_KEY}"
 
+      - name: Terraform Format Check
+        id: fmt
+        run: terraform fmt -check -recursive
+        continue-on-error: true
+
       - name: Terraform Validate
+        id: validate
         run: terraform validate -no-color
 
       - name: Terraform Plan
+        id: plan
         if: |
           github.event_name == 'pull_request' ||
           (github.event_name == 'workflow_dispatch' && github.event.inputs.workflow_action == 'plan')
-        run: terraform plan -input=false -out=tfplan
+        run: |
+          terraform plan -input=false -no-color -out=tfplan 2>&1 | tee plan_output.txt
+          echo "exitcode=${PIPESTATUS[0]}" >> $GITHUB_OUTPUT
+        continue-on-error: true
+
+      # ---------------------------------------------------------------
+      # Комментарий в PR с результатом terraform plan
+      # ---------------------------------------------------------------
+      - name: Comment PR with Terraform Plan
+        uses: actions/github-script@v7
+        if: github.event_name == 'pull_request'
+        env:
+          PLAN_OUTPUT: ${{ steps.plan.outputs.stdout }}
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            const fs = require('fs');
+
+            let planOutput = '';
+            try {
+              planOutput = fs.readFileSync('./terraform/plan_output.txt', 'utf8');
+            } catch(e) {
+              planOutput = 'Could not read plan output.';
+            }
+
+            // Обрезаем до 60000 символов чтобы не превысить лимит GitHub
+            if (planOutput.length > 60000) {
+              planOutput = planOutput.substring(0, 60000) + '\n\n... (output truncated)';
+            }
+
+            const fmtStatus = '${{ steps.fmt.outcome }}' === 'success' ? '✅' : '⚠️';
+            const validateStatus = '${{ steps.validate.outcome }}' === 'success' ? '✅' : '❌';
+            const planStatus = '${{ steps.plan.outcome }}' === 'success' ? '✅' : '❌';
+
+            const output = `## 🔧 Terraform Plan Results
+
+            | Step | Status |
+            |------|--------|
+            | Format | ${fmtStatus} \`${{ steps.fmt.outcome }}\` |
+            | Validate | ${validateStatus} \`${{ steps.validate.outcome }}\` |
+            | Plan | ${planStatus} \`${{ steps.plan.outcome }}\` |
+
+            <details>
+            <summary>📋 Show Plan Output</summary>
+
+            \`\`\`terraform
+            ${planOutput}
+            \`\`\`
+
+            </details>
+
+            > **Pusher:** @${{ github.actor }}
+            > **Commit:** \`${{ github.sha }}\`
+            > **Workflow:** \`${{ github.workflow }}\`
+
+            ⚠️ *Merge this PR to trigger \`terraform apply\` on \`main\`.*`;
+
+            // Найти существующий комментарий от бота и обновить его, чтобы не спамить
+            const { data: comments } = await github.rest.issues.listComments({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.issue.number,
+            });
+
+            const botComment = comments.find(comment =>
+              comment.user.type === 'Bot' &&
+              comment.body.includes('Terraform Plan Results')
+            );
+
+            if (botComment) {
+              await github.rest.issues.updateComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                comment_id: botComment.id,
+                body: output,
+              });
+            } else {
+              await github.rest.issues.createComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: context.issue.number,
+                body: output,
+              });
+            }
+
+      - name: Fail if plan failed
+        if: steps.plan.outcome == 'failure'
+        run: exit 1
 
       - name: Terraform Apply
         if: |
@@ -81,4 +181,4 @@ jobs:
 
       - name: Cleanup sensitive files
         if: always()
-        run: rm -f key.json tfplan
+        run: rm -f key.json tfplan plan_output.txt
