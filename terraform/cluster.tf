@@ -12,6 +12,9 @@ resource "yandex_kubernetes_cluster" "cluster" {
   service_ipv4_range      = "10.3.0.0/16"
 
   master {
+    version   = var.kubernetes_version
+    public_ip = true
+
     regional {
       region = var.region_id
 
@@ -30,9 +33,6 @@ resource "yandex_kubernetes_cluster" "cluster" {
         subnet_id = yandex_vpc_subnet.private2.id
       }
     }
-
-    version   = var.kubernetes_version
-    public_ip = true
 
     maintenance_policy {
       auto_upgrade = true
@@ -69,8 +69,12 @@ resource "yandex_kubernetes_node_group" "app_nodes" {
     }
 
     network_interface {
-      nat        = true
-      subnet_ids = [yandex_vpc_subnet.public.id]
+      nat = true
+      subnet_ids = [
+        yandex_vpc_subnet.public.id,
+        yandex_vpc_subnet.private1.id,
+        yandex_vpc_subnet.private2.id
+      ]
     }
   }
 

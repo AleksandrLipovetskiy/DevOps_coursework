@@ -80,7 +80,7 @@ variable "cluster_name" {
 
 variable "kubernetes_version" {
   type        = string
-  default     = "1.30"
+  default     = "1.32"
   description = "Версия Kubernetes"
 }
 
