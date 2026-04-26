@@ -75,3 +75,75 @@ variable "instance_settings" {
     nat           = true
   }
 }
+
+variable "region_id" {
+  type        = string
+  default     = "ru-central1"
+  description = "Регион для ресурсов Yandex.Cloud"
+}
+
+variable "cluster_name" {
+  type        = string
+  default     = "app-nspc-cluster"
+  description = "Имя Kubernetes кластера"
+}
+
+variable "kubernetes_version" {
+  type        = string
+  default     = "1.30"
+  description = "Версия Kubernetes"
+}
+
+variable "node_group_name" {
+  type        = string
+  default     = "app-nspc-nodes"
+  description = "Имя node group для Kubernetes"
+}
+
+variable "node_count" {
+  type        = number
+  default     = 2
+  description = "Число нод в node group"
+}
+
+variable "node_platform_id" {
+  type        = string
+  default     = "standard-v2"
+  description = "Платформа для узлов Kubernetes"
+}
+
+variable "node_memory" {
+  type        = number
+  default     = 4
+  description = "Память узла Kubernetes в ГБ"
+}
+
+variable "node_cores" {
+  type        = number
+  default     = 2
+  description = "Количество ядер на узел Kubernetes"
+}
+
+variable "node_disk_size" {
+  type        = number
+  default     = 64
+  description = "Размер диска узла Kubernetes в ГБ"
+}
+
+variable "node_disk_type" {
+  type        = string
+  default     = "network-hdd"
+  description = "Тип диска узла Kubernetes"
+}
+
+variable "registry_name" {
+  type        = string
+  default     = "app-nspc-registry"
+  description = "Имя Yandex Container Registry"
+}
+
+variable "registry_repo_name" {
+  type        = string
+  default     = "app-nspc"
+  description = "Имя репозитория в Yandex Container Registry"
+}

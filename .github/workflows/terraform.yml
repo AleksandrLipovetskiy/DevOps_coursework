@@ -2,6 +2,16 @@ name: Terraform Pipeline
 
 on:
   workflow_dispatch:
+    inputs:
+      workflow_action:
+        description: "Operation to run"
+        required: true
+        type: choice
+        default: "plan"
+        options:
+          - plan
+          - apply
+          - destroy
   push:
     branches: [main]
     paths:
@@ -50,13 +60,21 @@ jobs:
         working-directory: ./terraform
 
       - name: Terraform Plan
-        if: github.event_name == 'pull_request'
+        if: |
+          github.event_name == 'pull_request' ||
+          (github.event_name == 'workflow_dispatch' && github.event.inputs.workflow_action == 'plan')
         run: terraform plan -out=tfplan
         working-directory: ./terraform
 
       - name: Terraform Apply
         if: |
           github.event_name == 'push' &&
-          github.ref == 'refs/heads/main'
+          github.ref == 'refs/heads/main' ||
+          (github.event_name == 'workflow_dispatch' && github.event.inputs.workflow_action == 'apply')
         run: terraform apply -auto-approve
+        working-directory: ./terraform
+
+      - name: Terraform Destroy
+        if: github.event_name == 'workflow_dispatch' && github.event.inputs.workflow_action == 'destroy'
+        run: terraform destroy -auto-approve
         working-directory: ./terraform
