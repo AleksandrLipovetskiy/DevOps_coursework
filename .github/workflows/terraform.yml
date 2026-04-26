@@ -122,6 +122,18 @@ jobs:
             --wait \
             --timeout 10m
 
+      - name: Create imagePullSecret for YCR
+        if: |
+          (github.event_name == 'push' && github.ref == 'refs/heads/main') ||
+          (github.event_name == 'workflow_dispatch' && github.event.inputs.workflow_action == 'apply')
+        run: |
+          kubectl create namespace app-nspc --dry-run=client -o yaml | kubectl apply -f -
+          kubectl create secret docker-registry ycr-secret \
+            --docker-server=cr.yandex \
+            --docker-username=json_key \
+            --docker-password='${{ secrets.YC_SERVICE_ACCOUNT_KEY }}' \
+            --namespace=app-nspc \
+            --dry-run=client -o yaml | kubectl apply -f -
       - name: Deploy App manifests
         if: |
           (github.event_name == 'push' && github.ref == 'refs/heads/main') ||
@@ -141,6 +153,9 @@ jobs:
           kubectl get svc app-nspc -n app-nspc >> $GITHUB_STEP_SUMMARY || true
           echo "**Grafana:**" >> $GITHUB_STEP_SUMMARY
           kubectl get svc -n monitoring | grep grafana >> $GITHUB_STEP_SUMMARY || true
+        echo '**Pods:**' >> $GITHUB_STEP_SUMMARY
+        kubectl get pods -n app-nspc -o wide >> $GITHUB_STEP_SUMMARY || true
+        kubectl describe pods -n app-nspc >> $GITHUB_STEP_SUMMARY || true
 
       - name: Cleanup
         if: always()
