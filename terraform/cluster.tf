@@ -44,11 +44,6 @@ resource "yandex_kubernetes_cluster" "cluster" {
       }
     }
   }
-
-  depends_on = [
-    yandex_resourcemanager_folder_iam_member.terraeditor_editor,
-    yandex_resourcemanager_folder_iam_member.terraeditor_registry_reader,
-  ]
 }
 
 resource "yandex_kubernetes_node_group" "app_nodes" {
