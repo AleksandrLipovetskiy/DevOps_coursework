@@ -1,6 +1,11 @@
 resource "yandex_container_registry" "registry" {
-  name        = var.registry_name
-  description = "Container Registry for app-nspc"
+  name      = var.registry_name
+  folder_id = var.folder_id  # если нужно явно указать
+  
+  labels = {
+    purpose = "app-nspc"
+    env     = "production"
+  }
 }
 
 resource "yandex_container_repository" "app_nspc" {
