@@ -76,7 +76,7 @@ jobs:
         run: terraform apply -auto-approve -input=false -no-color
         working-directory: ./terraform
 
-      # ─── НОВЫЕ ШАГИ ───────────────────────────────────────────
+      # ─── APPLY: post-steps ──────────────────────────────────────
 
       - name: Install Yandex Cloud CLI
         if: |
@@ -134,6 +134,7 @@ jobs:
             --docker-password='${{ secrets.YC_SERVICE_ACCOUNT_KEY }}' \
             --namespace=app-nspc \
             --dry-run=client -o yaml | kubectl apply -f -
+
       - name: Deploy App manifests
         if: |
           (github.event_name == 'push' && github.ref == 'refs/heads/main') ||
@@ -157,23 +158,44 @@ jobs:
           kubectl get pods -n app-nspc -o wide >> $GITHUB_STEP_SUMMARY || true
           kubectl describe pods -n app-nspc >> $GITHUB_STEP_SUMMARY || true
 
-      - name: Cleanup
-        if: always()
-        run: rm -f /tmp/sa-key.json    
+      # ─── DESTROY: pre-steps ─────────────────────────────────────
 
-      - name: Clear registry before destroy
+      - name: Install Yandex Cloud CLI (destroy)  # fix: yc не был установлен при destroy
+        if: github.event_name == 'workflow_dispatch' && github.event.inputs.workflow_action == 'destroy'
         run: |
-          IMAGE_IDS=$(yc container image list \
+          curl -sSL https://storage.yandexcloud.net/yandexcloud-yc/install.sh | bash
+          echo "$HOME/yandex-cloud/bin" >> $GITHUB_PATH
+
+      - name: Configure YC CLI (destroy)
+        if: github.event_name == 'workflow_dispatch' && github.event.inputs.workflow_action == 'destroy'
+        run: |
+          echo '${{ secrets.YC_SERVICE_ACCOUNT_KEY }}' > /tmp/sa-key.json
+          $HOME/yandex-cloud/bin/yc config set service-account-key /tmp/sa-key.json
+          $HOME/yandex-cloud/bin/yc config set cloud-id "${{ secrets.YC_CLOUD_ID }}"
+          $HOME/yandex-cloud/bin/yc config set folder-id "${{ secrets.YC_FOLDER_ID }}"
+
+      - name: Clear registry before destroy  # fix: добавлен if destroy, исправлено имя репозитория
+        if: github.event_name == 'workflow_dispatch' && github.event.inputs.workflow_action == 'destroy'
+        run: |
+          IMAGE_IDS=$($HOME/yandex-cloud/bin/yc container image list \
             --repository-name "${{ secrets.REGISTRY_ID }}/app-nspc" \
             --format json | jq -r '.[].id')
-          for ID in $IMAGE_IDS; do
-            yc container image delete --id "$ID"
-          done
+          if [[ -z "$IMAGE_IDS" ]]; then
+            echo "No images found, skipping."
+          else
+            for ID in $IMAGE_IDS; do
+              echo "Deleting image $ID"
+              $HOME/yandex-cloud/bin/yc container image delete --id "$ID"
+            done
+            echo "All images deleted."
+          fi
 
       - name: Terraform Destroy
         if: github.event_name == 'workflow_dispatch' && github.event.inputs.workflow_action == 'destroy'
         run: terraform destroy -auto-approve -input=false
 
-      - name: Cleanup sensitive files
+      # ─── CLEANUP ────────────────────────────────────────────────
+
+      - name: Cleanup
         if: always()
-        run: rm -f key.json tfplan
+        run: rm -f /tmp/sa-key.json key.json tfplan
