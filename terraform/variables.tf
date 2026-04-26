@@ -4,16 +4,6 @@ variable "ssh_public_key" {
   description = "Публичный SSH‑ключ для доступа к инстансу, для подключения ssh -i ~/.ssh/github-actions-key ubuntu@<IP-инстанса>"
 }
 
-variable "backend_access_key" {
-  type        = string
-  description = "Access key для Object Storage (из статического ключа сервисного аккаунта)"
-}
-
-variable "backend_secret_key" {
-  type        = string
-  description = "Secret key для Object Storage"
-}
-
 variable "service_account_key_file" {
   type        = string
   description = "path file"
