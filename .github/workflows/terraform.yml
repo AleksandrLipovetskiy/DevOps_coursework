@@ -161,6 +161,15 @@ jobs:
         if: always()
         run: rm -f /tmp/sa-key.json    
 
+      - name: Clear registry before destroy
+        run: |
+          IMAGE_IDS=$(yc container image list \
+            --repository-name "${{ secrets.REGISTRY_ID }}/app-nspc" \
+            --format json | jq -r '.[].id')
+          for ID in $IMAGE_IDS; do
+            yc container image delete --id "$ID"
+          done
+
       - name: Terraform Destroy
         if: github.event_name == 'workflow_dispatch' && github.event.inputs.workflow_action == 'destroy'
         run: terraform destroy -auto-approve -input=false
