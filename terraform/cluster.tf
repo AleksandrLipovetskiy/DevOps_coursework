@@ -80,18 +80,15 @@ resource "yandex_kubernetes_node_group" "app_nodes" {
 
   allocation_policy {
     location {
-      zone      = yandex_vpc_subnet.public.zone
-      subnet_id = yandex_vpc_subnet.public.id
+      zone = yandex_vpc_subnet.public.zone
     }
 
     location {
-      zone      = yandex_vpc_subnet.private1.zone
-      subnet_id = yandex_vpc_subnet.private1.id
+      zone = yandex_vpc_subnet.private1.zone
     }
 
     location {
-      zone      = yandex_vpc_subnet.private2.zone
-      subnet_id = yandex_vpc_subnet.private2.id
+      zone = yandex_vpc_subnet.private2.zone
     }
   }
 
