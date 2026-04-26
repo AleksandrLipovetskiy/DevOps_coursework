@@ -39,13 +39,16 @@ jobs:
         uses: actions/checkout@v4
 
       - name: Setup Terraform
-        uses: hashicorp/setup-terraform@v2
+        uses: hashicorp/setup-terraform@v3
         with:
           terraform_version: 1.9.x
 
       - name: Create key.json for Yandex Cloud provider
         run: |
-          echo '${{ secrets.YC_SERVICE_ACCOUNT_KEY }}' > ./terraform/key.json
+          mkdir -p ./terraform
+          cat > ./terraform/key.json <<'EOF'
+${{ secrets.YC_SERVICE_ACCOUNT_KEY }}
+EOF
 
       - name: Terraform Init
         env:
