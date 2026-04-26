@@ -46,9 +46,7 @@ jobs:
       - name: Create key.json for Yandex Cloud provider
         run: |
           mkdir -p ./terraform
-          cat > ./terraform/key.json <<'EOF'
-          ${{ secrets.YC_SERVICE_ACCOUNT_KEY }}
-        EOF
+          printf '%s\n' "${{ secrets.YC_SERVICE_ACCOUNT_KEY }}" > ./terraform/key.json
 
       - name: Terraform Init
         env:
