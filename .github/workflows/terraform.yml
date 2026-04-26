@@ -28,11 +28,15 @@ on:
 jobs:
   terraform:
     runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: ./terraform
     env:
-      TF_VAR_service_account_key_file: ./key.json
+      TF_VAR_service_account_key_file: key.json
       TF_VAR_ssh_public_key: ${{ secrets.SSH_PUBLIC_KEY }}
       TF_VAR_cloud_id: ${{ secrets.YC_CLOUD_ID }}
       TF_VAR_folder_id: ${{ secrets.YC_FOLDER_ID }}
+      TF_INPUT: false
 
     steps:
       - name: Checkout code
@@ -45,39 +49,36 @@ jobs:
 
       - name: Create key.json for Yandex Cloud provider
         run: |
-          mkdir -p ./terraform
-          printf '%s\n' "${{ secrets.YC_SERVICE_ACCOUNT_KEY }}" > ./terraform/key.json
+          printf '%s\n' '${{ secrets.YC_SERVICE_ACCOUNT_KEY }}' > key.json
 
       - name: Terraform Init
         env:
           YC_ACCESS_KEY: ${{ secrets.YC_ACCESS_KEY }}
           YC_SECRET_KEY: ${{ secrets.YC_SECRET_KEY }}
         run: |
-          terraform init \
+          terraform init -input=false \
             -backend-config="access_key=${YC_ACCESS_KEY}" \
             -backend-config="secret_key=${YC_SECRET_KEY}"
-        working-directory: ./terraform
 
       - name: Terraform Validate
-        run: terraform validate
-        working-directory: ./terraform
+        run: terraform validate -no-color
 
       - name: Terraform Plan
         if: |
           github.event_name == 'pull_request' ||
           (github.event_name == 'workflow_dispatch' && github.event.inputs.workflow_action == 'plan')
-        run: terraform plan -out=tfplan
-        working-directory: ./terraform
+        run: terraform plan -input=false -out=tfplan
 
       - name: Terraform Apply
         if: |
-          github.event_name == 'push' &&
-          github.ref == 'refs/heads/main' ||
+          (github.event_name == 'push' && github.ref == 'refs/heads/main') ||
           (github.event_name == 'workflow_dispatch' && github.event.inputs.workflow_action == 'apply')
-        run: terraform apply -auto-approve
-        working-directory: ./terraform
+        run: terraform apply -auto-approve -input=false
 
       - name: Terraform Destroy
         if: github.event_name == 'workflow_dispatch' && github.event.inputs.workflow_action == 'destroy'
-        run: terraform destroy -auto-approve
-        working-directory: ./terraform
+        run: terraform destroy -auto-approve -input=false
+
+      - name: Cleanup sensitive files
+        if: always()
+        run: rm -f key.json tfplan
