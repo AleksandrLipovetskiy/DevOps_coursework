@@ -3,8 +3,8 @@ resource "yandex_kubernetes_cluster" "cluster" {
   description = "Managed Kubernetes cluster for app-nspc"
   network_id  = yandex_vpc_network.network.id
 
-  service_account_id      = yandex_iam_service_account.cluster.id
-  node_service_account_id = yandex_iam_service_account.node.id
+  service_account_id      = data.yandex_iam_service_account.terraeditor.id
+  node_service_account_id = data.yandex_iam_service_account.terraeditor.id
 
   release_channel         = "STABLE"
   network_policy_provider = "CALICO"
@@ -46,8 +46,8 @@ resource "yandex_kubernetes_cluster" "cluster" {
   }
 
   depends_on = [
-    yandex_resourcemanager_folder_iam_member.cluster_sa_editor,
-    yandex_resourcemanager_folder_iam_member.node_sa_registry_reader,
+    yandex_resourcemanager_folder_iam_member.terraeditor_editor,
+    yandex_resourcemanager_folder_iam_member.terraeditor_registry_reader,
   ]
 }
 

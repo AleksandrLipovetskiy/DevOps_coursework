@@ -10,10 +10,3 @@ output "registry_repository" {
   value = "cr.yandex/${var.folder_id}/${var.registry_repo_name}"
 }
 
-output "cluster_service_account_id" {
-  value = yandex_iam_service_account.cluster.id
-}
-
-output "node_service_account_id" {
-  value = yandex_iam_service_account.node.id
-}

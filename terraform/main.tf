@@ -18,7 +18,7 @@ resource "yandex_vpc_subnet" "private1" {
 
 resource "yandex_vpc_subnet" "private2" {
   name           = "private2"
-  zone           = "ru-central1-c"
+  zone           = "ru-central1-d"
   network_id     = yandex_vpc_network.network.id
   v4_cidr_blocks = [var.subnet_cidrs["private2"]]
 }

@@ -1,6 +1,4 @@
 resource "yandex_compute_instance" "bastion" {
-  count = 2
-
   name        = "bastion"
   platform_id = var.instance_settings.platform_id
   zone        = var.default_zone
@@ -20,9 +18,9 @@ resource "yandex_compute_instance" "bastion" {
   }
 
   network_interface {
-    subnet_id          = yandex_vpc_subnet.public.id
-    nat                = var.instance_settings.nat
-    #security_group_ids = [yandex_vpc_security_group.example.id]
+    subnet_id = yandex_vpc_subnet.public.id
+    nat       = var.instance_settings.nat
+    # security_group_ids = [yandex_vpc_security_group.example.id]
   }
 
   scheduling_policy {
