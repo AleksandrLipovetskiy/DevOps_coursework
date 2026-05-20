@@ -20,7 +20,7 @@ resource "yandex_compute_instance" "bastion" {
   network_interface {
     subnet_id = yandex_vpc_subnet.public.id
     nat       = var.instance_settings.nat
-    # security_group_ids = [yandex_vpc_security_group.example.id]
+    security_group_ids = [yandex_vpc_security_group.bastion.id]
   }
 
   scheduling_policy {
@@ -29,5 +29,7 @@ resource "yandex_compute_instance" "bastion" {
 
   metadata = {
     ssh-keys = "ubuntu:${var.ssh_public_key}"
+    # Hardening: отключаем серийный порт
+    serial-port-enable = "0"
   }
 }

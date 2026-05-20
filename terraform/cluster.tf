@@ -13,7 +13,10 @@ resource "yandex_kubernetes_cluster" "cluster" {
 
   master {
     version   = var.kubernetes_version
-    public_ip = true
+    public_ip = true  # нужен для GitHub Actions; доступ ограничен SG
+
+    # Привязываем SG к мастеру
+    security_group_ids = [yandex_vpc_security_group.k8s_master.id]  # ← ДОБАВЛЕНО
 
     regional {
       region = var.region_id
@@ -22,12 +25,10 @@ resource "yandex_kubernetes_cluster" "cluster" {
         zone      = yandex_vpc_subnet.public.zone
         subnet_id = yandex_vpc_subnet.public.id
       }
-
       location {
         zone      = yandex_vpc_subnet.private1.zone
         subnet_id = yandex_vpc_subnet.private1.id
       }
-
       location {
         zone      = yandex_vpc_subnet.private2.zone
         subnet_id = yandex_vpc_subnet.private2.id
@@ -36,7 +37,6 @@ resource "yandex_kubernetes_cluster" "cluster" {
 
     maintenance_policy {
       auto_upgrade = true
-
       maintenance_window {
         day        = "monday"
         start_time = "02:00"
@@ -69,39 +69,27 @@ resource "yandex_kubernetes_node_group" "app_nodes" {
     }
 
     network_interface {
-      nat = true
+      nat        = false  # ← ИЗМЕНЕНО: ноды не имеют прямого public IP
       subnet_ids = [
-        yandex_vpc_subnet.public.id,
-        yandex_vpc_subnet.private1.id,
-        yandex_vpc_subnet.private2.id
+        yandex_vpc_subnet.private1.id,  # ← ноды только в private подсетях
+        yandex_vpc_subnet.private2.id,
       ]
+      security_group_ids = [yandex_vpc_security_group.k8s_nodes.id]  # ← ДОБАВЛЕНО
     }
   }
 
   allocation_policy {
-    location {
-      zone = yandex_vpc_subnet.public.zone
-    }
-
-    location {
-      zone = yandex_vpc_subnet.private1.zone
-    }
-
-    location {
-      zone = yandex_vpc_subnet.private2.zone
-    }
+    location { zone = yandex_vpc_subnet.private1.zone }
+    location { zone = yandex_vpc_subnet.private2.zone }
   }
 
   scale_policy {
-    fixed_scale {
-      size = var.node_count
-    }
+    fixed_scale { size = var.node_count }
   }
 
   maintenance_policy {
     auto_upgrade = true
     auto_repair  = true
-
     maintenance_window {
       day        = "saturday"
       start_time = "03:00"

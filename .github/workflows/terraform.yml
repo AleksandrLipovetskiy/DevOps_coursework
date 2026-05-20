@@ -58,7 +58,10 @@ jobs:
         run: |
           terraform init -input=false \
             -backend-config="access_key=${YC_ACCESS_KEY}" \
-            -backend-config="secret_key=${YC_SECRET_KEY}"
+            -backend-config="secret_key=${YC_SECRET_KEY}" \
+            -backend-config="bucket=${{ secrets.TF_STATE_BUCKET }}" \
+            -backend-config="key=${{ secrets.TF_STATE_KEY }}" \
+            -backend-config="region=${{ secrets.TF_STATE_REGION }}"
 
       - name: Terraform Validate
         run: terraform validate -no-color

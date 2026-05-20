@@ -137,3 +137,28 @@ variable "registry_repo_name" {
   default     = "app-nspc"
   description = "Имя репозитория в Yandex Container Registry"
 }
+
+variable "allowed_ssh_cidrs" {
+  type        = list(string)
+  default     = ["0.0.0.0/0"]  # ИЗМЕНИТЬ на свой IP в продакшене!
+  description = "CIDRы, с которых разрешён SSH на bastion"
+}
+
+variable "github_actions_cidrs" {
+  type        = list(string)
+  default = [
+    "4.148.0.0/16",
+    "20.1.0.0/16",
+    "20.4.0.0/14",
+    "20.8.0.0/13",
+    "20.16.0.0/12",
+    "20.32.0.0/11",
+    "20.64.0.0/10",
+    "20.128.0.0/9",
+    "40.74.0.0/15",
+    "52.224.0.0/11",
+    "64.4.0.0/18",
+    "65.52.0.0/14",
+  ]
+  description = "IP-диапазоны GitHub Actions runners для доступа к K8s API. Актуальный список: https://api.github.com/meta (keys: actions)"
+}

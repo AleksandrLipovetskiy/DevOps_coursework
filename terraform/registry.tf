@@ -9,5 +9,6 @@ resource "yandex_container_registry" "registry" {
 }
 
 resource "yandex_container_repository" "app_nspc" {
-  name = "${yandex_container_registry.registry.id}/${var.registry_repo_name}"
+  registry_id = yandex_container_registry.registry.id
+  name        = var.registry_repo_name
 }
