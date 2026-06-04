@@ -1,3 +1,19 @@
+# Курсовая работа "Дипломный практикум в Yandex.Cloud" - Липовецкий Александр Владимирович
+
+[Репозиторий с конфигурационными файлами Terraform](https://github.com/AleksandrLipovetskiy/DevOps_coursework)  
+
+
+[Репозиторий с Dockerfile тестового приложения](https://github.com/AleksandrLipovetskiy/app-nspc)
+
+[Репозиторий с конфигурацией Kubernetes кластера](https://github.com/AleksandrLipovetskiy/app-nspc/tree/main/k8s)
+
+[Ссылка на тестовое приложение ]
+
+[Ссылка на веб интерфейс Grafana]
+
+
+
+
 # Безопасный доступ к кластеру
 
 ## Архитектура
