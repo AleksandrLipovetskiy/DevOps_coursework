@@ -34,6 +34,15 @@ resource "yandex_vpc_security_group" "k8s_master" {
     port           = 443
   }
 
+  # Health check Yandex NLB — обязателен, иначе NLB помечает мастер как unhealthy и дропает трафик
+  ingress {
+    protocol          = "TCP"
+    description       = "Yandex NLB health checks for master"
+    predefined_target = "loadbalancer_healthchecks"
+    from_port         = 0
+    to_port           = 65535
+  }
+
   # Внутрикластерный трафик (между мастерами в региональном кластере)
   ingress {
     protocol          = "ANY"

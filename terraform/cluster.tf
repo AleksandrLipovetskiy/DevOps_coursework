@@ -15,7 +15,7 @@ resource "yandex_kubernetes_cluster" "cluster" {
     version   = var.kubernetes_version
     public_ip = true  # нужен для GitHub Actions; доступ ограничен SG
 
-    security_group_ids = [yandex_vpc_security_group.k8s_master.id]
+    # security_group_ids = [yandex_vpc_security_group.k8s_master.id]  # не применять к мастеру — блокирует API
 
     regional {
       region = var.region_id
@@ -73,7 +73,7 @@ resource "yandex_kubernetes_node_group" "app_nodes" {
         yandex_vpc_subnet.private1.id,  # ← ноды только в private подсетях
         yandex_vpc_subnet.private2.id,
       ]
-      security_group_ids = [yandex_vpc_security_group.k8s_nodes.id]
+      # security_group_ids = [yandex_vpc_security_group.k8s_nodes.id]  # временно отключено
     }
   }
 
