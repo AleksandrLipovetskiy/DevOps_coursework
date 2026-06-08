@@ -177,8 +177,14 @@ jobs:
       - name: Clear registry before destroy
         if: github.event_name == 'workflow_dispatch' && github.event.inputs.workflow_action == 'destroy'
         run: |
+          REGISTRY_ID=$($HOME/yandex-cloud/bin/yc container registry get app-nspc-registry \
+            --format json | jq -r '.id')
+          if [[ -z "$REGISTRY_ID" ]]; then
+            echo "Registry not found, skipping."
+            exit 0
+          fi
           IMAGE_IDS=$($HOME/yandex-cloud/bin/yc container image list \
-            --registry-id "${{ secrets.REGISTRY_ID }}" \
+            --registry-id "${REGISTRY_ID}" \
             --format json | jq -r '.[].id')
           if [[ -z "$IMAGE_IDS" ]]; then
             echo "No images found, skipping."

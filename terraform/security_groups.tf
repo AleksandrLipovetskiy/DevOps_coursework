@@ -26,28 +26,11 @@ resource "yandex_vpc_security_group" "k8s_master" {
   name       = "k8s-master-sg"
   network_id = yandex_vpc_network.network.id
 
-  # K8s API только с bastion (для людей через tunnel)
-  ingress {
-    protocol          = "TCP"
-    description       = "K8s API from bastion"
-    security_group_id = yandex_vpc_security_group.bastion.id
-    port              = 443
-  }
-
-  # K8s API для GitHub Actions (публичные IP runners)
+  # K8s API открыт публично — защита на уровне K8s (TLS, RBAC, client certs)
   ingress {
     protocol       = "TCP"
-    description    = "K8s API from GitHub Actions"
-    v4_cidr_blocks = var.github_actions_cidrs
-    port           = 443
-  }
-
-  # K8s API от нод — kubelet регистрируется через этот порт при старте
-  # Используем CIDR приватных подсетей вместо SG-ссылки, чтобы избежать циклической зависимости
-  ingress {
-    protocol       = "TCP"
-    description    = "K8s API from nodes (private subnets)"
-    v4_cidr_blocks = ["192.168.20.0/24", "192.168.30.0/24", "192.168.40.0/24"]
+    description    = "K8s API from anywhere"
+    v4_cidr_blocks = ["0.0.0.0/0"]
     port           = 443
   }
 
