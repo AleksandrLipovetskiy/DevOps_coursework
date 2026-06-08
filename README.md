@@ -5,8 +5,8 @@
 | **Инфраструктура (Terraform)** | [AleksandrLipovetskiy/DevOps_coursework](https://github.com/AleksandrLipovetskiy/DevOps_coursework) |
 | **Тестовое приложение** | [AleksandrLipovetskiy/app-nspc](https://github.com/AleksandrLipovetskiy/app-nspc) |
 | **Kubernetes-манифесты** | [app-nspc/k8s/](https://github.com/AleksandrLipovetskiy/app-nspc/tree/main/k8s) |
-| **Ссылка на приложение** | `http://<LoadBalancer-IP>` (IP из `kubectl get svc -n app-nspc`) |
-| **Grafana** | `http://<Grafana-LB-IP>` (IP из `kubectl get svc -n monitoring`) |
+| **Ссылка на приложение** | `http://158.160.178.97` (IP из `kubectl get svc -n app-nspc`) |
+| **Grafana** | `http://http://158.160.167.52` (IP из `kubectl get svc -n monitoring`) |
 
 ---
 
