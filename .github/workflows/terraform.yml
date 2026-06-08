@@ -131,6 +131,9 @@ jobs:
           helm repo add prometheus-community https://prometheus-community.github.io/helm-charts
           helm repo update
 
+          # Сбрасываем pending state если предыдущий upgrade был прерван
+          helm rollback kube-prometheus-stack -n monitoring 2>/dev/null || true
+
           # Удаляем старые admission jobs, которые блокируют helm upgrade
           kubectl delete job -n monitoring \
             kube-prometheus-stack-admission-create \
