@@ -42,7 +42,15 @@ resource "yandex_vpc_security_group" "k8s_master" {
     port           = 443
   }
 
-  # Внутрикластерный трафик
+  # K8s API от нод — kubelet регистрируется через этот порт при старте
+  ingress {
+    protocol          = "TCP"
+    description       = "K8s API from nodes"
+    security_group_id = yandex_vpc_security_group.k8s_nodes.id
+    port              = 443
+  }
+
+  # Внутрикластерный трафик (между мастерами в региональном кластере)
   ingress {
     protocol          = "ANY"
     description       = "Internal cluster traffic"
@@ -60,6 +68,7 @@ resource "yandex_vpc_security_group" "k8s_nodes" {
   name       = "k8s-nodes-sg"
   network_id = yandex_vpc_network.network.id
 
+  # Kubelet API — мастер обращается к ноде (exec, logs, metrics)
   ingress {
     protocol          = "TCP"
     description       = "Kubelet from master"
@@ -68,22 +77,33 @@ resource "yandex_vpc_security_group" "k8s_nodes" {
     to_port           = 10250
   }
 
+  # Весь трафик между нодами одной группы (Calico VXLAN, pod-to-pod, kube-proxy)
   ingress {
     protocol          = "ANY"
     description       = "Intra-node traffic"
     predefined_target = "self_security_group"
   }
 
-  # NodePort только из внутренней сети
+  # Health-check Yandex Cloud внутренних балансировщиков
+  # Требуется для нормального создания кластера и работы LoadBalancer-сервисов
   ingress {
     protocol       = "TCP"
-    description    = "NodePort range internal"
-    v4_cidr_blocks = ["192.168.0.0/16"]
+    description    = "Yandex LB health checks"
+    v4_cidr_blocks = ["198.18.235.0/24", "198.18.248.0/24"]
+    from_port      = 0
+    to_port        = 65535
+  }
+
+  # NodePort для внешнего доступа к сервисам (LoadBalancer → NodePort)
+  ingress {
+    protocol       = "TCP"
+    description    = "NodePort range"
+    v4_cidr_blocks = ["0.0.0.0/0"]
     from_port      = 30000
     to_port        = 32767
   }
 
-  # HTTP/HTTPS для LoadBalancer
+  # HTTP/HTTPS для LoadBalancer-сервисов
   ingress {
     protocol       = "TCP"
     description    = "HTTP inbound"

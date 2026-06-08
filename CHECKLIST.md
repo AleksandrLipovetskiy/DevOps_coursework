@@ -1,220 +1,132 @@
-# CHECKLIST - Дипломный практикум DevOps
+# CHECKLIST — Дипломный практикум DevOps (ВЫПОЛНЕНО)
 
-## Подготовка к старту
+Все этапы дипломного практикума завершены. Ниже — финальный список с отметками.
 
-- [ ] Клонировал/обновил оба репозитория:
-  - [ ] `https://github.com/AleksandrLipovetskiy/DevOps_coursework`
-  - [ ] `https://github.com/AleksandrLipovetskiy/app-nspc`
+---
 
-- [ ] Установил необходимые инструменты:
-  - [ ] Terraform ≥ 1.8.4
-  - [ ] kubectl
-  - [ ] Yandex CLI (`yc`)
-  - [ ] Helm
-  - [ ] Docker (для локального тестирования)
+## Этап 1 — Инфраструктура (Terraform)
 
-- [ ] Подготовил Yandex.Cloud:
-  - [ ] Сервисный аккаунт создан
-  - [ ] JSON key скачан
-  - [ ] Object Storage bucket создан (`tf-state-diplom`)
-  - [ ] S3 Access/Secret keys созданы
-  - [ ] Cloud ID и Folder ID известны
-  - [ ] SSH публичный ключ готов
-  - [ ] IAM токен получен (opsy для тестирования)
+- [x] Сервисный аккаунт создан, JSON-ключ получен
+- [x] Object Storage bucket `tf-state-diplom` создан
+- [x] S3 Access/Secret ключи настроены
+- [x] Terraform backend инициализирован (S3 в Yandex Object Storage)
+- [x] VPC `vpc-network-prod` создана
+- [x] Публичная подсеть `192.168.10.0/24` (ru-central1-a)
+- [x] Приватные подсети `192.168.20.0/24`, `192.168.30.0/24`, `192.168.40.0/24`
+- [x] NAT Gateway и таблица маршрутизации для приватных подсетей
+- [x] Bastion host в публичной подсети (Ubuntu 24.04, preemptible)
+- [x] Security Groups: `bastion-sg`, `k8s-master-sg`, `k8s-nodes-sg`
+- [x] Container Registry `app-nspc-registry` создан
 
-## GitHub Secrets (DevOps_coursework)
+## Этап 2 — Kubernetes-кластер
 
-- [ ] `YC_SERVICE_ACCOUNT_KEY` (JSON key в виде строки)
-- [ ] `YC_ACCESS_KEY` (S3 Access Key)
-- [ ] `YC_SECRET_KEY` (S3 Secret Key)
-- [ ] `YC_CLOUD_ID`
-- [ ] `YC_FOLDER_ID`
-- [ ] `SSH_PUBLIC_KEY` (ssh-rsa AAAA...)
+- [x] Regional Kubernetes-кластер `app-nspc-cluster` (K8s 1.32, STABLE)
+- [x] Мастер с публичным IP (3 зоны: ru-central1-a/b/d)
+- [x] Node Group `app-nspc-nodes`: 2 ноды, standard-v2, без публичных IP
+- [x] Network Policy Provider: Calico
+- [x] Pod CIDR: `10.2.0.0/16`, Service CIDR: `10.3.0.0/16`
+- [x] Auto-upgrade и auto-repair нод включены
+- [x] Доступ через bastion + SSH-туннель настроен
 
-## GitHub Secrets (app-nspc)
+## Этап 3 — Тестовое приложение
 
-- [ ] `YC_FOLDER_ID`
-- [ ] `YC_REGISTRY_PASSWORD` (base64 json_key)
-- [ ] `KUBECONFIG` (base64 ~/.kube/config)
+- [x] Репозиторий `app-nspc` создан
+- [x] Dockerfile написан (nginx:alpine, non-root, multi-stage)
+- [x] Docker-образ собран и опубликован в Yandex Container Registry
+- [x] Kubernetes-манифесты написаны: namespace, deployment, service, networkpolicy, rbac, serviceaccount
+- [x] Приложение задеплоено в кластер, доступно через LoadBalancer IP
+- [x] Non-root container (uid 101), read-only FS, dropped ALL capabilities
+- [x] NetworkPolicy: default deny, allow HTTP + DNS
+- [x] RBAC: минимальные права, automount token отключён
 
-## Stage 1: Инфраструктура
+## Этап 4 — Мониторинг
 
-### Локально
+- [x] Helm-чарт `kube-prometheus-stack` задеплоен в namespace `monitoring`
+- [x] Prometheus запущен (retention 24h, 512Mi–1Gi RAM)
+- [x] Grafana запущена (LoadBalancer, 5Gi PVC)
+- [x] Alertmanager запущен (5Gi PVC)
+- [x] Node Exporter запущен (метрики хоста)
+- [x] kube-state-metrics запущен (метрики K8s-объектов)
+- [x] Встроенные дашборды доступны (Kubernetes, Node Exporter)
 
-```bash
-cd DevOps_coursework
-export YC_CLOUD_ID="..."
-export YC_FOLDER_ID="..."
-export YC_ACCESS_KEY="..."
-export YC_SECRET_KEY="..."
-export SSH_PUBLIC_KEY="ssh-rsa ..."
+## Этап 5 — CI/CD для инфраструктуры
 
-cd terraform
-terraform init -backend-config="access_key=$YC_ACCESS_KEY" ...
-terraform validate
-terraform plan
-terraform apply
-```
+- [x] GitHub Actions workflow `terraform.yml` создан
+- [x] При push в `main` (изменения в `terraform/**`) → `terraform apply`
+- [x] При PR → `terraform plan` (проверка без применения)
+- [x] Ручной запуск: plan / apply / destroy через `workflow_dispatch`
+- [x] После apply: автоматический деплой мониторинга и приложения
+- [x] Destroy: очистка Container Registry перед уничтожением инфраструктуры
+- [x] GitHub Secrets настроены: YC_SERVICE_ACCOUNT_KEY, YC_CLOUD_ID, YC_FOLDER_ID, YC_ACCESS_KEY, YC_SECRET_KEY, SSH_PUBLIC_KEY, REGISTRY_ID
 
-### Через GitHub Actions
+## Этап 6 — CI/CD для приложения
 
-- [ ] Коммит в develop
-- [ ] Pull Request в main → workflow `plan`
-- [ ] Merge PR → workflow `apply`
+- [x] CI workflow `ci.yml`: сборка + push образа при push в main/develop/tags
+- [x] CD workflow `cd.yml`: деплой в K8s при наличии тега `vX.Y.Z`
+- [x] Тег запускает полный цикл: build → push → deploy → rollout status → LoadBalancer IP
+- [x] Образ тегируется: `:latest`, `:<short-sha>`, `:vX.Y.Z`
+- [x] Подстановка registry ID и тега через `sed` при деплое
+- [x] GitHub Secrets настроены: YC_SERVICE_ACCOUNT_KEY, YC_CLOUD_ID, YC_FOLDER_ID, REGISTRY_ID
 
-**Проверка:**
-```bash
-kubectl cluster-info
-kubectl get nodes
-kubectl get pods --all-namespaces
-```
+---
 
-**Сохрани для демонстрации:**
-- [ ] Screenshot успешного `terraform apply`
-- [ ] Вывод `terraform output -json`
-- [ ] Вывод `kubectl get nodes`
+## Финальные артефакты
 
-## Stage 2: Настройка доступа к кластеру
+### Terraform
 
-- [ ] Получи kubeconfig: `yc managed-kubernetes cluster get-credentials app-nspc-cluster --region ru-central1 --external`
-- [ ] Проверь доступ: `kubectl get nodes`
-- [ ] Проверь системные поды: `kubectl get pods --all-namespaces`
+- [x] `terraform/` — все конфигурационные файлы
+- [x] `terraform output -json` — см. скриншот [`docs/screenshots/terraform-output.png`](docs/screenshots/terraform-output.png)
+- [x] `terraform apply` — см. скриншот [`docs/screenshots/terraform-apply.png`](docs/screenshots/terraform-apply.png)
 
-📖 **Подробная инструкция:** [docs/KUBECONFIG-SETUP.md](docs/KUBECONFIG-SETUP.md)
+### Kubernetes
 
-## Stage 2: Приложение
+- [x] `kubectl get nodes -o wide` — см. скриншот [`docs/screenshots/kubectl-nodes.png`](docs/screenshots/kubectl-nodes.png)
+- [x] `kubectl get pods --all-namespaces` — см. скриншот [`docs/screenshots/kubectl-pods-all.png`](docs/screenshots/kubectl-pods-all.png)
+- [x] `kubectl get svc -n app-nspc` — см. скриншот [`docs/screenshots/kubectl-svc-app.png`](docs/screenshots/kubectl-svc-app.png)
 
-- [ ] Dockerfile обновлен (готов)
-- [ ] CI workflow в `.github/workflows/ci.yml` (готов)
-- [ ] CD workflow в `.github/workflows/cd.yml` (готов)
-- [ ] Kubernetes манифесты в `k8s/` (готов)
+### GitHub Actions
 
-### Локально тестируем
+- [x] Terraform pipeline (apply) — см. скриншот [`docs/screenshots/github-actions-terraform.png`](docs/screenshots/github-actions-terraform.png)
+- [x] CI (docker build + push) — см. скриншот [`docs/screenshots/github-actions-ci.png`](docs/screenshots/github-actions-ci.png)
+- [x] CD (kubernetes deploy) — см. скриншот [`docs/screenshots/github-actions-cd.png`](docs/screenshots/github-actions-cd.png)
 
-```bash
-cd app-nspc
-docker build -t app-nspc:test .
-docker run -p 8080:80 app-nspc:test
-# Проверь http://localhost:8080
-```
+### Приложение
 
-### Через GitHub Actions
+- [x] Docker-образ в реестре: `cr.yandex/<REGISTRY_ID>/app-nspc`
+- [x] Приложение доступно по LoadBalancer IP — см. скриншот [`docs/screenshots/app-browser.png`](docs/screenshots/app-browser.png)
+- [x] Dockerfile и k8s-манифесты: [app-nspc репозиторий](https://github.com/AleksandrLipovetskiy/app-nspc)
 
-```bash
-cd app-nspc
-git tag v1.0.0
-git push origin v1.0.0
-# Ждем CI build + CD deploy
-```
+### Мониторинг
 
-**Проверка:**
-```bash
-kubectl get pods -n app-nspc
-kubectl get svc -n app-nspc
-# Узнай LoadBalancer IP и проверь curl/браузер
-```
+- [x] Grafana дашборд — см. скриншот [`docs/screenshots/grafana-dashboard.png`](docs/screenshots/grafana-dashboard.png)
+- [x] Prometheus targets — см. скриншот [`docs/screenshots/prometheus-targets.png`](docs/screenshots/prometheus-targets.png)
 
-**Сохрани для демонстрации:**
-- [ ] Screenshot GitHub Actions successful runs (CI + CD)
-- [ ] Вывод `kubectl get pods -n app-nspc`
-- [ ] URL приложения (LoadBalancer IP)
-- [ ] Screenshot приложения в браузере
+---
 
-## Stage 3: Мониторинг
+## Команды для демонстрации
 
 ```bash
-cd DevOps_coursework/helm
-bash deploy-monitoring.sh
-
-# или вручную
-helm repo add prometheus-community https://prometheus-community.github.io/helm-charts
-helm install kube-prometheus-stack prometheus-community/kube-prometheus-stack \
-  -n monitoring --create-namespace -f kube-prometheus-stack-values.yaml
-```
-
-**Проверка:**
-```bash
-kubectl get pods -n monitoring
-kubectl port-forward -n monitoring svc/kube-prometheus-stack-grafana 3000:80
-# http://localhost:3000 (admin/admin)
-```
-
-**Сохрани для демонстрации:**
-- [ ] Screenshot Grafana дашбоарда
-- [ ] Список метрик в Prometheus
-- [ ] Screenshot алерта (если настроишь)
-
-## Финальная демонстрация
-
-Команды для демонстрации экзаменатору:
-
-```bash
-# 1. Инфраструктура
+# Инфраструктура
 terraform output -json
 kubectl get nodes -o wide
 kubectl get pods --all-namespaces
 
-# 2. Приложение
+# Приложение
 kubectl get deployment -n app-nspc
 kubectl get svc -n app-nspc
 curl http://<EXTERNAL-IP>
 
-# 3. Docker image
-docker images | grep app-nspc
-# или
+# Образы в реестре
 yc container repository list --registry-name app-nspc-registry
+yc container image list --repository-name app-nspc
 
-# 4. Мониторинг
+# Мониторинг (port-forward)
 kubectl port-forward -n monitoring svc/kube-prometheus-stack-grafana 3000:80
-# http://localhost:3000
+# http://localhost:3000  (admin / admin)
+kubectl port-forward -n monitoring svc/kube-prometheus-stack-prometheus 9090:9090
+# http://localhost:9090/targets
 
-# 5. Logs
-kubectl logs -n app-nspc deployment/app-nspc
+# Логи
+kubectl logs -n app-nspc deployment/app-nspc --tail=100
 kubectl logs -n monitoring -l app.kubernetes.io/name=prometheus
 ```
-
-## Артефакты для диплома
-
-Сохрани для предоставления на экзамен:
-
-1. **Terraform файлы:**
-   - [ ] terraform/
-   - [ ] Вывод `terraform output -json`
-
-2. **GitHub Actions:**
-   - [ ] Screenshot успешного terraform apply run
-   - [ ] Screenshot успешного docker build + push
-   - [ ] Screenshot успешного kubernetes deployment
-   - [ ] Pull Request с комментарием от CI pipeline
-
-3. **Приложение:**
-   - [ ] Docker image в реестре (cr.yandex/...)
-   - [ ] URL приложения (LoadBalancer IP)
-   - [ ] Screenshot приложения в браузере
-   - [ ] Dockerfile и k8s манифесты
-
-4. **Мониторинг:**
-   - [ ] Grafana дашбоард с метриками приложения
-   - [ ] Grafana дашбоард node_exporter
-   - [ ] список метрик в Prometheus
-
-5. **Документация:**
-   - [ ] README в DevOps_coursework (готов)
-   - [ ] README в app-nspc (готов)
-   - [ ] Этот checklist с галочками
-
-## Troubleshooting
-
-| Проблема | Решение |
-|----------|---------|
-| `backend: s3 config: access denied` | Проверь `YC_ACCESS_KEY`, `YC_SECRET_KEY` |
-| `Pod not running` | `kubectl describe pod`, `kubectl logs` |
-| `LoadBalancer pending` | Подожди 2-3 минуты, проверь `kubectl get svc` |
-| `docker login failed` | Проверь `YC_REGISTRY_PASSWORD` (base64 json_key) |
-| `terraform plan fails` | `terraform validate`, проверь state в S3 |
-
----
-
-**Статус:** [ ] В процессе [ ] Готово к демонстрации
-
-Дата обновления: `date`
