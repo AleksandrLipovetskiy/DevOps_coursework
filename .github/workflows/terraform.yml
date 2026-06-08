@@ -106,6 +106,13 @@ jobs:
         with:
           version: 'latest'
 
+      - name: Wait for nodes to be ready
+        if: |
+          (github.event_name == 'push' && github.ref == 'refs/heads/main') ||
+          (github.event_name == 'workflow_dispatch' && github.event.inputs.workflow_action == 'apply')
+        run: |
+          kubectl wait --for=condition=Ready nodes --all --timeout=5m
+
       - name: Deploy Monitoring (Grafana + Prometheus)
         if: |
           (github.event_name == 'push' && github.ref == 'refs/heads/main') ||
@@ -114,6 +121,13 @@ jobs:
         run: |
           helm repo add prometheus-community https://prometheus-community.github.io/helm-charts
           helm repo update
+
+          # Удаляем старые admission jobs, которые блокируют helm upgrade
+          kubectl delete job -n monitoring \
+            kube-prometheus-stack-admission-create \
+            kube-prometheus-stack-admission-patch \
+            --ignore-not-found=true 2>/dev/null || true
+
           helm upgrade --install kube-prometheus-stack \
             prometheus-community/kube-prometheus-stack \
             --namespace monitoring \
