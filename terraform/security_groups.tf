@@ -43,11 +43,12 @@ resource "yandex_vpc_security_group" "k8s_master" {
   }
 
   # K8s API от нод — kubelet регистрируется через этот порт при старте
+  # Используем CIDR приватных подсетей вместо SG-ссылки, чтобы избежать циклической зависимости
   ingress {
-    protocol          = "TCP"
-    description       = "K8s API from nodes"
-    security_group_id = yandex_vpc_security_group.k8s_nodes.id
-    port              = 443
+    protocol       = "TCP"
+    description    = "K8s API from nodes (private subnets)"
+    v4_cidr_blocks = ["192.168.20.0/24", "192.168.30.0/24", "192.168.40.0/24"]
+    port           = 443
   }
 
   # Внутрикластерный трафик (между мастерами в региональном кластере)
