@@ -106,12 +106,21 @@ jobs:
         with:
           version: 'latest'
 
-      - name: Wait for nodes to be ready
+      - name: Wait for K8s cluster to become available
         if: |
           (github.event_name == 'push' && github.ref == 'refs/heads/main') ||
           (github.event_name == 'workflow_dispatch' && github.event.inputs.workflow_action == 'apply')
         run: |
-          kubectl wait --for=condition=Ready nodes --all --timeout=5m
+          echo "Waiting for K8s API to become available (up to 15 min)..."
+          for i in $(seq 1 30); do
+            if kubectl cluster-info --request-timeout=15s 2>/dev/null; then
+              echo "K8s API is reachable"
+              break
+            fi
+            echo "Attempt $i/30: not reachable yet, waiting 30s..."
+            sleep 30
+          done
+          kubectl wait --for=condition=Ready nodes --all --timeout=10m
 
       - name: Deploy Monitoring (Grafana + Prometheus)
         if: |
